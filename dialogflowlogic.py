@@ -12,6 +12,25 @@ def removeSpaces(url_block):
             temp += url_block[i]
     return temp
 
+#allows for leeway in user input and gives options for recommended searches
+def similarSearch(term_in, term_compare, filename):
+    list_data = open(filename, 'r')
+    if (term_in in term_compare):
+        possible_searches = []
+        for i in list_data:
+            if term_in in str(i.rstrip("\n\r")):
+                possible_searches.append(str(i.rstrip("\n\r")))
+
+        validInput = False
+        while(validInput is False):
+            print("Did you mean:")
+            for i in possible_searches:
+                print('\t'+i)
+            userin = input(': ')
+            if userin.upper() in possible_searches:
+                return userin.upper()
+    return False
+
 #finds input location/meal
 def findInput(category,filename):
     found = False
@@ -21,8 +40,14 @@ def findInput(category,filename):
         for i in list_data:
             if search.upper() == str(i.rstrip("\n\r")):
                 found = True
-                break
+                return search
         if (found == False):
+            list_data = open(filename,'r')
+            for i in list_data:
+                similarsearch = similarSearch(search.upper(), i, filename)
+                if similarsearch != False:
+                    found = True
+                    return similarsearch
             print(category + ' not found.')
     return search
 
@@ -93,7 +118,7 @@ while(True):
     date += date_in
     url = url + location + date + meal
     url = removeSpaces(url)
-
+    
     #fetching json
     data = requests.get(url).json()
 
