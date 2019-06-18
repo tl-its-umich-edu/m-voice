@@ -24,4 +24,4 @@
 +Retail AM 
  Retail Items
  Retail PM
--Smart Temps+Smart Temps
+ Smart Temps

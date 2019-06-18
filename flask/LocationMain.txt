@@ -78,7 +78,7 @@ Munger Eventmaster
 North Quad Dining Hall
 North Quad EM MGifts
 North Quad Eventmaster
-North Star Reach Camp
+North Star Reach Camp 
 Northwood EM MGifts
 Northwood I-III Eventmaster
 Northwood IV and V EventMaster
@@ -112,7 +112,8 @@ Ugos Pierpont Eventmaster
 Ugos Union
 Ugos Union EM MGifts
 Ugos Union Eventmaster
-UMMA CafeVictors
+UMMA Cafe
+Victors
 Victors Eventmaster
 West Quad EM MGifts
 West Quad Eventmaster
