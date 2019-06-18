@@ -1,0 +1,27 @@
+--- 
++++ 
+@@ -1,5 +1,4 @@
+ 8:00 am - 12:00 am
+-8am to 12am
+ After Hours
+ Breakfast
+ Catering
+@@ -8,14 +7,17 @@
+ Dinner
+ Dinner Transition
+ EventMaster
++EventMaster
+ Late Night
+ Light Lunch
+ Lunch
+ Lunch Transition
+ MGifts
++MGifts
++Not in Use Catering
+ Parstocks
+ Rebill
+-Retail AM
++Retail AM 
+ Retail Items
+ Retail PM
+ Smart Temps
