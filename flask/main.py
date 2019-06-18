@@ -1,7 +1,8 @@
 from functools import wraps
 from flask import Flask, request, jsonify, Response, abort
 import json, requests, urllib.parse,urllib.request
-import filecmp, difflib
+import filecmp, difflib, shutil
+from remove_ignore_entities import removeIgnoreEntities
 
 app = Flask(__name__)
 
@@ -101,44 +102,72 @@ def cronUpdate():
         text = 'Authentication failed.'
     
     else:
-        text = "Check meal and location diff."
         #Meal Diff
+        mealchanged = False
+        locationchanged = False
         mealreq = requests.post('http://api.studentlife.umich.edu/menu/menu_generator/meal.php')
         mealdata = mealreq.json()
                 
-        newmeal = open('temp_comparator.txt.','w').close()
-        newmeal = open('temp_comparator.txt.','w')
+        newmeal = open('temp_new.txt.','w').close()
+        newmeal = open('temp_new.txt.','w')
         for i in mealdata:
             if i['optionValue'] != "":
                 newmeal.write(i['optionValue'] + '\n')
         newmeal.close()
+
+        shutil.copy2('MealMain.txt', 'temp_original.txt')
+        removeIgnoreEntities('temp_original.txt', 'Meal')
+        removeIgnoreEntities('temp_new.txt', 'Meal')
+
+
+        newmeal = open('temp_new.txt', 'r').readlines()
+        originalmeal = open('MealMain.txt', 'r').readlines()
+
         diffmeal = open('MealDiff.txt','w').close()
         diffmeal = open('MealDiff.txt','w')
-
-        newmeal = open('temp_comparator.txt', 'r').readlines()
-        originalmeal = open('MealMain.txt', 'r').readlines()
         for line in difflib.unified_diff(originalmeal, newmeal):
+            mealchanged = True
             diffmeal.write(line)
 
-
+        
         #Location Diff
         locationreq = requests.post('http://api.studentlife.umich.edu/menu/menu_generator/location.php')
         locationdata = locationreq.json()
 
-        newlocation = open('temp_comparator.txt.','w').close()
-        newlocation = open('temp_comparator.txt.','w')
+        newlocation = open('temp_new.txt.','w').close()
+        newlocation = open('temp_new.txt.','w')
         for i in locationdata:
             if i['optionValue'] != "":
                 newlocation.write(i['optionValue'] + '\n')
         newlocation.close()
+
+        shutil.copy2('LocationMain.txt', 'temp_original.txt')
+        removeIgnoreEntities('temp_original.txt', 'Location')
+        removeIgnoreEntities('temp_new.txt', 'Location')
+        
+        newlocation = open('temp_new.txt', 'r').readlines()
+        originallocation = open('LocationMain.txt', 'r').readlines()
+
         difflocation = open('LocationDiff.txt','w').close()
         difflocation = open('LocationDiff.txt','w')
-
-        newlocation = open('temp_comparator.txt', 'r').readlines()
-        originallocation = open('LocationMain.txt', 'r').readlines()
         for line in difflib.unified_diff(originallocation, newlocation):
+            locationchanged = True
             difflocation.write(line)
 
+        #Check for file changes for appropriate http response
+        if locationchanged or mealchanged:
+            text = "Update "
+            if locationchanged:
+                text += "location"
+            if mealchanged:
+                if locationchanged:
+                    text += " and meal"
+                else:
+                    text += "meal"
+            text += "."
+            
+        else:
+            text = "Data up to date"
 
     return jsonify(
       text
