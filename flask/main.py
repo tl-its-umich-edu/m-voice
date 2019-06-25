@@ -4,6 +4,8 @@ import json, requests, urllib.parse,urllib.request
 import filecmp, difflib, shutil
 from remove_ignore_entities import removeIgnoreEntities
 from deepdiff import DeepDiff
+import numpy as np
+from google.cloud import datastore
 
 app = Flask(__name__)
 
@@ -103,7 +105,18 @@ def cronUpdate():
     #Cron authentication through post request data
     req_data = request.get_json()
     responsedata = ''
-    if (req_data['user'] != 'user') or (req_data['pass'] != 'pass'):
+
+    #Get secret values from Datastore environment variables
+    client = datastore.Client()
+    query = client.query(kind = 'env_vars')
+    entity = query.fetch()
+
+    secrets = list(entity)[0]
+    slackurl = secrets.get('slack_api')
+    passw = secrets.get('pass')
+    user = secrets.get('user')
+    
+    if (req_data['user'] != user) or (req_data['pass'] != passw):
         message = 'Authentication failed.'
         
     else:
@@ -127,10 +140,15 @@ def cronUpdate():
         for entry in originalmealfile:
             originalmeal.append(entry.strip('\n'))
 
-        originalmeal = removeIgnoreEntities(originalmeal, 'Meal')
-        newmeal = removeIgnoreEntities(newmeal, 'Meal')
+        originalmeal = np.array(removeIgnoreEntities(originalmeal, 'Meal'))
+        newmeal = np.array(removeIgnoreEntities(newmeal, 'Meal'))
 
-        responsedatameal = DeepDiff(originalmeal, newmeal)
+
+        mealremoved = np.setdiff1d(originalmeal, newmeal).tolist()
+        mealadded = np.setdiff1d(newmeal, originalmeal).tolist()
+        mealchanged = False
+        if bool(mealremoved) or bool(mealadded):
+            mealchanged = True
 
 
         #Location Diff
@@ -147,30 +165,63 @@ def cronUpdate():
         for entry in originallocationfile:
             originallocation.append(entry.strip('\n'))
 
-        originallocation = removeIgnoreEntities(originallocation, 'Location')
-        newlocation = removeIgnoreEntities(newlocation, 'Location')
+        originallocation = np.array(removeIgnoreEntities(originallocation, 'Location'))
+        newlocation = np.array(removeIgnoreEntities(newlocation, 'Location'))
 
-        responsedatalocation = DeepDiff(originallocation, newlocation)
+        locationremoved = np.setdiff1d(originallocation, newlocation).tolist()
+        locationadded = np.setdiff1d(newlocation, originallocation).tolist()
+        locationchanged = False
+        if bool(locationremoved) or bool(locationadded):
+            locationchanged = True
 
         
-        #Check for file changes for appropriate http response
-        if bool(responsedatalocation) or bool(responsedatameal):
-            message = "Update "
-            if bool(responsedatalocation):
+        #Check for file changes for appropriate response to slack if needed
+        if locationchanged or mealchanged:
+            slackresponse = {}
+            slackresponse['attachments'] = []
+            
+            message = "Update needed for "
+            if locationchanged:
                 message += "location"
-            if bool(responsedatameal):
-                if bool(responsedatalocation):
+                if bool(locationadded):
+                    newlocationsstr = ''
+                    for i in locationadded:
+                        newlocationsstr = newlocationsstr + i + '\n'
+                    slackresponse['attachments'].append( { "title": "New locations", "text": newlocationsstr } )
+                if bool(locationremoved):
+                    removedlocationsstr = ''
+                    print(locationremoved)
+                    for i in locationremoved:
+                        removedlocationsstr = removedlocationsstr + i + '\n'
+                    slackresponse['attachments'].append( { "title": "Removed locations", "text": removedlocationsstr } )
+            if mealchanged:
+                if bool(mealadded):
+                    newmealsstr = ''
+                    for i in mealadded:
+                        newmealsstr = newmealsstr + i + '\n'
+                    slackresponse['attachments'].append( { "title": "New meals", "text": newmealsstr } )
+                if bool(mealremoved):
+                    removedmealsstr = ''
+                    for i in mealremoved:
+                        removedmealsstr = removedmealsstr + i + '\n'
+                    slackresponse['attachments'].append( { "title": "Removed meals", "text": removedmealsstr } )
+                if locationchanged:
                     message += " and meal"
                 else:
                     message += "meal"
-            message += "."
+            message += " in m-voice."
+            
+            slackresponse['text'] = message
+
+            slackpostdata = requests.post(slackurl, json=slackresponse)
             
         else:
             message = "Data up to date"
 
     return jsonify(
       message=message,
-      locationdiff=responsedatalocation,
-      mealdiff=responsedatameal
-    )
-
+      locationadded=locationadded,
+      locationremoved=locationremoved,
+      mealadded=mealadded,
+      mealremoved=mealremoved
+)
