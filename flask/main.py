@@ -111,16 +111,10 @@ def cronUpdate():
     query = client.query(kind = 'env_vars')
     entity = query.fetch()
 
-    secretindex = 0
-    for secrets in entity:
-        for secret in secrets:
-            if secretindex == 0:
-                user = secret
-            elif secretindex == 1:
-                passw = secret
-            else:
-                slackurl = secret
-            secretindex += 1
+    secrets = list(entity)[0]
+    slackurl = secrets.get('slack_api')
+    passw = secrets.get('pass')
+    user = secrets.get('user')
     
     if (req_data['user'] != user) or (req_data['pass'] != passw):
         message = 'Authentication failed.'
@@ -230,5 +224,4 @@ def cronUpdate():
       locationremoved=locationremoved,
       mealadded=mealadded,
       mealremoved=mealremoved
-    )
-
+)
