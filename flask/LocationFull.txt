@@ -217,3 +217,68 @@ UMMA
 CafeVictors
 Victors
 West
+Baits EM
+EM MGifts
+League Eventmaster
+Betsy Barbour
+Blue Cafe
+East Quad
+North Quad
+South Quad
+Bursley Dining
+Dining Hall
+Bursley EM
+Bake Shop
+Golf Course
+Hors d'Oeuvres
+Meeting Breaks
+Parent Unit
+Seasonal Menus
+Couzens EM
+Henderson House
+House Eventmaster
+Java Blu
+East Quad EM
+North Quad EM
+South Quad EM
+SPH EM
+Taubman EM
+Lamb Chop
+Chop Cafe
+Lawyers Club
+Lloyd EM
+Markley Dining
+Markley EM
+Martha Cook
+Mosher Jordan
+North Quad
+North Quad EM
+North Star
+North Star Reach
+Star Reach
+Northwood EM
+Northwood I
+Northwood I-III
+Northwood IV
+Northwood V
+Northwood IV and V
+IV and V
+I-III
+Oxford EM
+Baits EventMaster
+Barbour EventMaster
+Markley EventMaster
+Petrovich Family
+Family Grill
+South Quad Dining
+South Quad EM
+GF Pantry
+Stockwell EM
+Twigs After
+After Hours
+Ugos League EM
+League EM
+Pierpont EventMaster
+Ugos Union EM
+West Quad
+West Quad EM
