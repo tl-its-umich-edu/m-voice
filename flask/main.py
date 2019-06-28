@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify, Response, abort
 import json, requests, urllib.parse,urllib.request
 import filecmp, difflib, shutil
 from remove_ignore_entities import removeIgnoreEntities
-from deepdiff import DeepDiff
 import numpy as np
 from google.cloud import datastore
 
