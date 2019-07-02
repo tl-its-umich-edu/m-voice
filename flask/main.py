@@ -26,16 +26,16 @@ def requires_auth(f):
     return decorated
 
 
-
 #Check if input term is part of a larger official term
 def isPartialTerm(search, filename):
     list_data = open(filename)
     for i in list_data:
+        print(search.upper(),str(i.rstrip("\n\r")).upper())
         if search.upper() == str(i.rstrip("\n\r")).upper():
             return True
     return False
 
-
+#Handling non-exact search terminology
 def similarSearch(search, category):
 
     #Check type of term and adjust file searched accordingly
@@ -48,11 +48,9 @@ def similarSearch(search, category):
     else:
         return "File error"
 
-    
     #Check if input term is part of a larger official term
     if isPartialTerm(search, extrasFilename) == False:
         return "Found"
-
 
     #If it is, suggest possible full terms
     
@@ -69,35 +67,69 @@ def similarSearch(search, category):
         outputstring += i
         outputstring += ' or '
     
-    return outputstring[:-4]
-
-
-
+    return outputstring[:-4] + '?'
 
 
 #Webhook call
 @app.route('/webhook',methods=['POST'])
 @requires_auth
 def webhookPost():
-    #name = request.args.get("name", "World")
-    #return f'Hello, {name}!'
     req_data = request.get_json()
 
+    parameters = {}
+    
+    locationEntered = False
+    mealEntered = False
+    #Check for Location and Meal parameters in Dialogflow request
     if 'Location' in req_data['queryResult']['parameters']:
         category = 'Location'
         search = req_data['queryResult']['parameters']['Location']
-    elif 'Meal' in req_data['queryResult']['parameters']:
-        category = 'Meal'
-        search = req_data['queryResult']['parameters']['Meal']
-    #return req_data['queryResult']['intent']['displayName']
-    else:
+        parameters[category] = category 
+        locationEntered = True
+    if 'Meal' in req_data['queryResult']['parameters']:
+        if locationEntered == False:
+            category = 'Meal'
+            search = req_data['queryResult']['parameters']['Meal']
+        mealEntered = True
+    #Error if neither are found
+    if (locationEntered == False) and (mealEntered == False):
         search = 'Error'
         category = 'Error'
+
+    #Handle search for location or meal, location first if both parameters are in request
     text = similarSearch(search, category)
-    
-    return jsonify(
-      fulfillmentText=text
-    )
+
+    #Setting up response data
+    responsedata = { 'fulfillmentText': text }
+
+    #Text is valid    
+    if text == 'Found': 
+        validParams = True
+
+        #If both location and meal parameters included in request, now handle meal
+        if locationEntered and mealEntered:
+            category = 'Meal'
+            search = req_data['queryResult']['parameters']['Meal']
+            text = similarSearch(search, category)
+            
+            if text == 'Found':
+                parameters[category] = category
+            else:
+                validParams = False
+
+        #If location/meal/both search is fully valid, send response triggering Dialogflow event
+        if validParams:
+            responsedata['followupEventInput'] = {
+                'name': 'valid_event',
+                'languageCode': 'en-US',
+                'parameters': parameters
+            }
+        #Else, send suggestion to user for the parameter that was invalid
+        #If both parameters invalid, prioritize location
+        else:
+            responsedata['fulfillmentText'] = text
+
+    return jsonify ( responsedata )
 
 @app.route('/cron',methods=['POST'])
 def cronUpdate():
