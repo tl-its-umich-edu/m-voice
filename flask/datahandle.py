@@ -82,7 +82,7 @@ def findItemFormatting(possiblematches):
 
 
 #Find possible matches to specified food item
-def findMatches(coursedata, possiblematches, item_in, mealname, i):
+def findMatches(coursedata, possiblematches, item_in, mealname):
     datatype = type(coursedata)
 
     if datatype is list:
@@ -162,23 +162,23 @@ def requestItem(date_in,loc_in, meal_in, item_in):
     firstRound = True
     
     #Loop through meals
-    for i in range(len(data['menu']['meal'])):
+    for i in data['menu']['meal']:
         
         #If meal specified, only check specified meal
-        if mealEntered and data['menu']['meal'][i]['name'].upper() != meal_in.upper():
+        if mealEntered and i['name'].upper() != meal_in.upper():
             continue
         #Skip meal if no food items available
-        if 'course' not in data['menu']['meal'][i]:
+        if 'course' not in i:
             continue
 
         #Loop through food items in course
-        for j in range(len(data['menu']['meal'][i]['course'])):
-            for key, value in data['menu']['meal'][i]['course'][j].items():
+        for j in i['course']:
+            for key, value in j.items():
                 if key == 'name':
-                    coursedata = data['menu']['meal'][i]['course'][j]['menuitem']
-                    mealname = data['menu']['meal'][i]['name']
+                    coursedata = j['menuitem']
+                    mealname = i['name']
                     #Append matches to specified item to possiblematches list
-                    possiblematches = findMatches(coursedata, possiblematches, item_in, mealname, i)
+                    possiblematches = findMatches(coursedata, possiblematches, item_in, mealname)
          
     #Specified item found
     if len(possiblematches) > 0:
