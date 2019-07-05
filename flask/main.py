@@ -2,9 +2,11 @@ from functools import wraps
 from flask import Flask, request, jsonify, Response, abort
 import json, requests, urllib.parse,urllib.request
 import filecmp, difflib, shutil
-from remove_ignore_entities import removeIgnoreEntities
 import numpy as np
 from google.cloud import datastore
+import datetime
+from remove_ignore_entities import removeIgnoreEntities
+from datahandle import datahandle
 
 app = Flask(__name__)
 
@@ -30,7 +32,6 @@ def requires_auth(f):
 def isPartialTerm(search, filename):
     list_data = open(filename)
     for i in list_data:
-        print(search.upper(),str(i.rstrip("\n\r")).upper())
         if search.upper() == str(i.rstrip("\n\r")).upper():
             return True
     return False
@@ -80,16 +81,21 @@ def webhookPost():
     
     locationEntered = False
     mealEntered = False
+    meal_in = ""
+    loc_in = ""
     #Check for Location and Meal parameters in Dialogflow request
     if 'Location' in req_data['queryResult']['parameters']:
         category = 'Location'
         search = req_data['queryResult']['parameters']['Location']
+        loc_in = search
         parameters[category] = category 
         locationEntered = True
     if 'Meal' in req_data['queryResult']['parameters']:
         if locationEntered == False:
             category = 'Meal'
             search = req_data['queryResult']['parameters']['Meal']
+            meal_in = search
+            parameters[category] = category
         mealEntered = True
     #Error if neither are found
     if (locationEntered == False) and (mealEntered == False):
@@ -98,7 +104,7 @@ def webhookPost():
 
     #Handle search for location or meal, location first if both parameters are in request
     text = similarSearch(search, category)
-
+    
     #Setting up response data
     responsedata = { 'fulfillmentText': text }
 
@@ -110,6 +116,7 @@ def webhookPost():
         if locationEntered and mealEntered:
             category = 'Meal'
             search = req_data['queryResult']['parameters']['Meal']
+            meal_in = search
             text = similarSearch(search, category)
             
             if text == 'Found':
@@ -119,11 +126,28 @@ def webhookPost():
 
         #If location/meal/both search is fully valid, send response triggering Dialogflow event
         if validParams:
-            responsedata['followupEventInput'] = {
-                'name': 'valid_event',
-                'languageCode': 'en-US',
-                'parameters': parameters
-            }
+            outputcontextparams = req_data['queryResult']['outputContexts'][0]['parameters']
+            if len(parameters) == 1:
+                
+                if 'Location' in parameters and ('Meal' not in outputcontextparams):
+                    eventname = 'valid_location'
+                    responsedata = { 'fulfillmentText': 'What meal would you like?' }
+
+                elif 'Meal' in parameters and ('Location' not in outputcontextparams):
+                    eventname = 'valid_meal'
+                    responsedata = { 'fulfillmentText': 'Which dining location?' }
+                    
+                else:
+                    if 'Location' not in parameters:
+                        loc_in  = req_data['queryResult']['outputContexts'][0]['parameters']['Location']
+                    if 'Meal' not in parameters:
+                        meal_in = req_data['queryResult']['outputContexts'][0]['parameters']['Meal']
+                    date_in = datetime.date.today()
+                    responsedata['fulfillmentText'] = datahandle(date_in, loc_in, meal_in)
+            else:
+                date_in = datetime.date.today()
+                responsedata['fulfillmentText'] = datahandle(date_in, loc_in, meal_in)
+                
         #Else, send suggestion to user for the parameter that was invalid
         #If both parameters invalid, prioritize location
         else:
@@ -221,7 +245,6 @@ def cronUpdate():
                     slackresponse['attachments'].append( { "title": "New locations", "text": newlocationsstr } )
                 if bool(locationremoved):
                     removedlocationsstr = ''
-                    print(locationremoved)
                     for i in locationremoved:
                         removedlocationsstr = removedlocationsstr + i + '\n'
                     slackresponse['attachments'].append( { "title": "Removed locations", "text": removedlocationsstr } )
