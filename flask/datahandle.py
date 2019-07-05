@@ -62,16 +62,22 @@ def getCoursesAndItems(data):
                     returndata += getItemsInCourse(data['menu']['meal']['course'], value)
     return returndata
 
-#Formatting list of possible matches into more natural sentence structure
+#Formatting list of possible matches into more natural sentence structure by removing redundancy
+#[Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] ->
+    #[Chicken, chicken wings during lunch, and chicken patty during dinner]
 def findItemFormatting(possiblematches):
 
     for i in range(len(possiblematches)):
         if i == 0:
             continue
         words = possiblematches[i].split()
+        
+        #If previous term has same ending ("Dinner") as current term, remove it
         if(possiblematches[i].split()[-1] == possiblematches[i - 1].split()[-1]):
+            #8 = amount of characters taken up by [' during ']
             length = len(possiblematches[i].split()[-1]) + 8
             possiblematches[i - 1] = possiblematches[i - 1][:length*-1]
+            
     return possiblematches
 
 
