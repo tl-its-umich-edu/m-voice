@@ -2,7 +2,10 @@ import urllib.parse
 import requests
 import urllib.request
 
-#remove spaces in url string
+
+###Helper functions
+
+#Removes spaces in url string
 def removeSpaces(url_block):
     temp = ""
     for i in range(len(url_block)):
@@ -12,7 +15,7 @@ def removeSpaces(url_block):
             temp += url_block[i]
     return temp
 
-#check if meal is available at specified location/date
+#Checks if meal is available at specified location/date
 def checkMealAvailable(data,meal):
     for key in data['menu']['meal']:
         if data['menu']['meal']['name'].upper() == meal.upper():
@@ -23,7 +26,7 @@ def checkMealAvailable(data,meal):
             #print(data['menu']['meal']['message']['content'])
             return False
 
-#check if course is available in specified meal
+#Checks if course is available in specified meal
 def checkCourseAvailable(data, course):
     for i in range(len(data['menu']['meal']['course'])):
         for key, value in data['menu']['meal']['course'][i].items():
@@ -32,7 +35,7 @@ def checkCourseAvailable(data, course):
                     return True
     return False
 
-#gets food items of specified valid course
+#Gets food items of specified valid course
 def getItemsInCourse(coursedata, course):
     returndata = ""
 
@@ -47,6 +50,7 @@ def getItemsInCourse(coursedata, course):
                 returndata += ('\t' + coursedata[i]['menuitem']['name'] + '\n')
     return returndata
 
+#Gets courses and food items of each course
 def getCoursesAndItems(data):
     returndata = ""
     for i in range(len(data['menu']['meal']['course'])):
@@ -58,9 +62,48 @@ def getCoursesAndItems(data):
                     returndata += getItemsInCourse(data['menu']['meal']['course'], value)
     return returndata
 
-#########################################################################
+#Formatting list of possible matches into more natural sentence structure
+def findItemFormatting(possiblematches):
 
-def datahandle(date_in,loc_in, meal_in):
+    for i in range(len(possiblematches)):
+        if i == 0:
+            continue
+        words = possiblematches[i].split()
+        if(possiblematches[i].split()[-1] == possiblematches[i - 1].split()[-1]):
+            length = len(possiblematches[i].split()[-1]) + 8
+            possiblematches[i - 1] = possiblematches[i - 1][:length*-1]
+    return possiblematches
+
+
+#Find possible matches to specified food item
+def findMatches(coursedata, possiblematches, item_in, mealname, i):
+    datatype = type(coursedata)
+
+    if datatype is list:
+        for k in range(len(coursedata)):
+            if item_in.upper() in coursedata[k]['name'].upper():
+                if coursedata[k]['name'][-1] == ' ':
+                    coursedata[k]['name'] = coursedata[k]['name'][:-1]
+                    
+                possiblematches.append(coursedata[k]['name'] + ' during ' + mealname)
+
+    elif datatype is dict:
+        if item_in.upper() in coursedata['name'].upper():
+            if coursedata['name'][-1] == ' ':
+                coursedata['name'] = coursedata['name'][:-1]
+                
+            possiblematches.append(coursedata['name'] + ' during ' + mealname)    
+
+    return possiblematches
+
+
+
+#########################################################################
+###Primary Handler Functions
+
+
+#Handle location + meal data request
+def requestLocationAndMeal(date_in,loc_in, meal_in):
 
     #date_in='2019-05-15'
     
@@ -82,7 +125,71 @@ def datahandle(date_in,loc_in, meal_in):
     
     #checking if specified meal available
     if checkMealAvailable(data, meal_in):
+        print(getCoursesAndItems(data))
         return getCoursesAndItems(data)
     else:
         return "No meal is available."
+
+#Handle meal item data request
+def requestItem(date_in,loc_in, meal_in, item_in):
+    url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
+    location = '&location='
+    date = '&date='
+    meal = '&meal='
+
+    #API url concatenation
+    location += loc_in
+    date += str(date_in)
+    url = url + location + date + meal
+    url = removeSpaces(url)
+
+    if meal_in == '':
+        mealEntered = False
+    else:
+        mealEntered = True
+    
+    #fetching json
+    data = requests.get(url).json()
+    
+    possiblematches = []
+    
+    firstRound = True
+    
+    #Loop through meals
+    for i in range(len(data['menu']['meal'])):
+        
+        #If meal specified, only check specified meal
+        if mealEntered and data['menu']['meal'][i]['name'].upper() != meal_in.upper():
+            continue
+        #Skip meal if no food items available
+        if 'course' not in data['menu']['meal'][i]:
+            continue
+
+        #Loop through food items in course
+        for j in range(len(data['menu']['meal'][i]['course'])):
+            for key, value in data['menu']['meal'][i]['course'][j].items():
+                if key == 'name':
+                    coursedata = data['menu']['meal'][i]['course'][j]['menuitem']
+                    mealname = data['menu']['meal'][i]['name']
+                    #Append matches to specified item to possiblematches list
+                    possiblematches = findMatches(coursedata, possiblematches, item_in, mealname, i)
+         
+    #Specified item found
+    if len(possiblematches) > 0:
+        possiblematches = findItemFormatting(possiblematches)   
+        text = 'Yes, there is '
+        for i in range(len(possiblematches)):
+            if len(possiblematches) > 1 and (i == len(possiblematches) - 1):
+                text += ' and'
+            text += ' ' + possiblematches[i]
+            if i != len(possiblematches) - 1:
+                text += ','
+            else:
+                text += '.'
+    #Specified item not found
+    else:
+        text = 'Sorry, that is not available.'
+
+    
+    return { 'fulfillmentText': text}
 

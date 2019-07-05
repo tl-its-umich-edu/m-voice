@@ -6,14 +6,11 @@ import numpy as np
 from google.cloud import datastore
 import datetime
 from remove_ignore_entities import removeIgnoreEntities
-from datahandle import datahandle
+from datahandle import requestLocationAndMeal, requestItem
 
 app = Flask(__name__)
 
-#Basic homepage for checking successful deployment
-@app.route('/')
-def home():
-    return "Success"
+###Helper functions
 
 #Authentication
 def check_auth(name,passw):
@@ -70,19 +67,14 @@ def similarSearch(search, category):
     
     return outputstring[:-4] + '?'
 
-
-#Webhook call
-@app.route('/webhook',methods=['POST'])
-@requires_auth
-def webhookPost():
-    req_data = request.get_json()
-
+#findLocationAndMeal intent handling
+def findLocationAndMeal(req_data):
     parameters = {}
     
     locationEntered = False
     mealEntered = False
     meal_in = ""
-    loc_in = ""
+    loc_in = ""    
     #Check for Location and Meal parameters in Dialogflow request
     if 'Location' in req_data['queryResult']['parameters']:
         category = 'Location'
@@ -143,18 +135,57 @@ def webhookPost():
                     if 'Meal' not in parameters:
                         meal_in = req_data['queryResult']['outputContexts'][0]['parameters']['Meal']
                     date_in = datetime.date.today()
-                    responsedata['fulfillmentText'] = datahandle(date_in, loc_in, meal_in)
+                    responsedata['fulfillmentText'] = requestLocationAndMeal(date_in, loc_in, meal_in)
             else:
                 date_in = datetime.date.today()
-                responsedata['fulfillmentText'] = datahandle(date_in, loc_in, meal_in)
+                responsedata['fulfillmentText'] = requestLocationAndMeal(date_in, loc_in, meal_in)
                 
         #Else, send suggestion to user for the parameter that was invalid
         #If both parameters invalid, prioritize location
         else:
             responsedata['fulfillmentText'] = text
 
+    return responsedata
+
+#findItem intent handling
+def findItem(req_data):
+    
+    date_in = datetime.date.today()
+    loc_in = req_data['queryResult']['parameters']['Location']
+    item_in = req_data['queryResult']['parameters']['any']
+    if 'Meal' in req_data['queryResult']['parameters']:
+        meal_in = req_data['queryResult']['parameters']['Meal']
+    else:
+        meal_in = ''
+        
+    return requestItem(date_in, loc_in, meal_in, item_in)
+
+
+
+#########################################################################
+###Primary Handler Functions
+
+#Basic homepage for checking successful deployment
+@app.route('/')
+def home():
+    return "Success"
+
+#Webhook call
+@app.route('/webhook',methods=['POST'])
+@requires_auth
+def webhookPost():
+    req_data = request.get_json()
+
+
+    intentname = req_data['queryResult']['intent']['displayName']
+    if intentname == 'findLocationAndMeal':
+        responsedata = findLocationAndMeal(req_data)
+    elif intentname == 'findItem':
+        responsedata = findItem(req_data)
+
     return jsonify ( responsedata )
 
+#Google Cron update handler
 @app.route('/cron',methods=['POST'])
 def cronUpdate():
     #Cron authentication through post request data
