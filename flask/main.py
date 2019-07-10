@@ -13,7 +13,7 @@ app = Flask(__name__)
 ###Helper functions
 
 #Authentication
-def check_auth(name,passw):
+def check_auth(name, passw):
     return (name=='user' and passw=='pass')
 def requires_auth(f):
     @wraps(f)
@@ -24,18 +24,29 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-
-#Check if input term is part of a larger official term
 def isPartialTerm(search, filename):
+    """Checks if input term is part of a larger official term by looking for any matches with split up versions of regular terms.
+
+    :param search: The searched term (e.g. 'north quad')
+    :type search: string
+    :param filename: Name of the file the term is being searched for in ('LocationExtra.txt')
+    :type filename: string
+    """
     list_data = open(filename)
     for i in list_data:
         if search.upper() == str(i.rstrip("\n\r")).upper():
             return True
     return False
 
-#Handling non-exact search terminology
 def similarSearch(search, category):
+    """Handles user input that doesn't match official terms exactly using `isPartialTerm`. If input ``search`` is a partial term of any official terms, returns list of recommended official terms.
 
+    :param search: The searched term (e.g. 'north quad')
+    :type search: string
+    :param category: Entity category of the search term ('Location'/'Meal')
+    :type filename: string
+    """
+    
     #Check type of term and adjust file searched accordingly
     if category.upper() == 'LOCATION':
         extrasFilename = 'LocationExtra.txt'
@@ -67,8 +78,12 @@ def similarSearch(search, category):
     
     return outputstring[:-4] + '?'
 
-#findLocationAndMeal intent handling
 def findLocationAndMeal(req_data):
+    """Dialogflow ``findLocationAndMeal`` intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.
+
+    :param req_data: Dialogflow POST request data
+    :type req_data: JSON
+    """
     parameters = {}
     
     locationEntered = False
@@ -168,12 +183,16 @@ def findItem(req_data):
 #Basic homepage for checking successful deployment
 @app.route('/')
 def home():
+    """Web app home page for quick successful deployment check.
+    """
     return "Success"
 
 #Webhook call
 @app.route('/webhook',methods=['POST'])
 @requires_auth
 def webhookPost():
+    """Dialogflow webhook POST Request handler requiring authentication. Uses `findLocationAndMeal` or `findItem` intent handlers and returns appropriate JSON response.
+    """
     req_data = request.get_json()
 
 
@@ -188,6 +207,8 @@ def webhookPost():
 #Google Cron update handler
 @app.route('/cron',methods=['POST'])
 def cronUpdate():
+    """Google Cloud Platform scheduled CRON request handler. Checks for changes to MDining API data (Location/Meal), sends notification to Slack channel if change detected. Ignores changes to specified terms in ``ignore.json`` file. Authenticates requests by checking for user and passw in POST request body.
+    """
     #Cron authentication through post request data
     req_data = request.get_json()
     responsedata = ''

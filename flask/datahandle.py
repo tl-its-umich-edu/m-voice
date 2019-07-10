@@ -5,8 +5,12 @@ import urllib.request
 
 ###Helper functions
 
-#Removes spaces in url string
 def removeSpaces(url_block):
+    """Removes spaces in url string to create valid url string.
+
+    :param url_block: The url string to be manipulated
+    :type search: string
+    """
     temp = ""
     for i in range(len(url_block)):
         if url_block[i] == ' ':
@@ -15,8 +19,14 @@ def removeSpaces(url_block):
             temp += url_block[i]
     return temp
 
-#Checks if meal is available at specified location/date
-def checkMealAvailable(data,meal):
+def checkMealAvailable(data, meal):
+    """Searches response data to check if meal is available at specified location/date.
+
+    :param data: MDining API HTTP response data
+    :type data: JSON
+    :param meal: Name of meal
+    :type meal: string
+    """
     for key in data['menu']['meal']:
         if data['menu']['meal']['name'].upper() == meal.upper():
             if 'course' in data['menu']['meal']:
@@ -26,8 +36,14 @@ def checkMealAvailable(data,meal):
             #print(data['menu']['meal']['message']['content'])
             return False
 
-#Checks if course is available in specified meal
 def checkCourseAvailable(data, course):
+    """Searches response data to check if course is available in specified meal.
+
+    :param data: MDining API HTTP response data
+    :type data: JSON
+    :param course: Name of course
+    :type course: string
+    """
     for i in range(len(data['menu']['meal']['course'])):
         for key, value in data['menu']['meal']['course'][i].items():
             if key == 'name':
@@ -37,6 +53,13 @@ def checkCourseAvailable(data, course):
 
 #Gets food items of specified valid course
 def getItemsInCourse(coursedata, course):
+    """Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.
+
+    :param coursedata: Chosen course subsection of MDining API HTTP response data
+    :type coursedata: JSON
+    :param course: Name of course
+    :type course: string
+    """
     returndata = ""
 
     for i in range(len(coursedata)):
@@ -50,8 +73,12 @@ def getItemsInCourse(coursedata, course):
                 returndata += ('\t' + coursedata[i]['menuitem']['name'] + '\n')
     return returndata
 
-#Gets courses and food items of each course
 def getCoursesAndItems(data):
+    """Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.
+
+    :param data: MDining API HTTP response data
+    :type data: JSON
+    """
     returndata = ""
     for i in range(len(data['menu']['meal']['course'])):
         for key, value in data['menu']['meal']['course'][i].items():
@@ -62,11 +89,13 @@ def getCoursesAndItems(data):
                     returndata += getItemsInCourse(data['menu']['meal']['course'], value)
     return returndata
 
-#Formatting list of possible matches into more natural sentence structure by removing redundancy
-#[Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] ->
-    #[Chicken, chicken wings during lunch, and chicken patty during dinner]
 def findItemFormatting(possiblematches):
-
+    """Formatting list of possible matches into more natural sentence structure by removing redundancy:
+    [Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -> [Chicken, chicken wings during lunch, and chicken patty during dinner]
+    
+    :param possiblematches: List of food items in data that matched user input
+    :type possiblematches: list
+    """
     for i in range(len(possiblematches)):
         if i == 0:
             continue
@@ -81,8 +110,18 @@ def findItemFormatting(possiblematches):
     return possiblematches
 
 
-#Find possible matches to specified food item
 def findMatches(coursedata, possiblematches, item_in, mealname):
+    """Appends matches of specified food item in data of an individual course to list of possible matches.
+
+    :param coursedata: Chosen course subsection of MDining API HTTP response data
+    :type coursedata: JSON
+    :param possiblematches: List of food items in data that matched user input
+    :type possiblematches: list
+    :param item_in: User input food item
+    :type item_in: string
+    :param mealname: Name of meal
+    :type mealname: string
+    """
     datatype = type(coursedata)
 
     if datatype is list:
@@ -108,9 +147,16 @@ def findMatches(coursedata, possiblematches, item_in, mealname):
 ###Primary Handler Functions
 
 
-#Handle location + meal data request
-def requestLocationAndMeal(date_in,loc_in, meal_in):
+def requestLocationAndMeal(date_in, loc_in, meal_in):
+    """Handles searching for appropriate data response for valid specified location and meal entities from ``findLocationAndMeal`` intent.
 
+    :param date_in: Input date
+    :type date_in: string
+    :param loc_in: Input location
+    :type loc_in: string
+    :param meal_in: Input meal
+    :type meal_in: string
+    """
     #date_in='2019-05-15'
     
     #preset vars
@@ -137,7 +183,18 @@ def requestLocationAndMeal(date_in,loc_in, meal_in):
         return "No meal is available."
 
 #Handle meal item data request
-def requestItem(date_in,loc_in, meal_in, item_in):
+def requestItem(date_in, loc_in, meal_in, item_in):
+    """Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from ``findItem`` intent.
+
+    :param date_in: Input date
+    :type date_in: string
+    :param loc_in: Input location
+    :type loc_in: string
+    :param meal_in: Input meal
+    :type meal_in: string
+    :param item_in: Input food item
+    :type item_in: string
+    """
     url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
     location = '&location='
     date = '&date='
