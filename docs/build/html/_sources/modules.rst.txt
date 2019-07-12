@@ -1,7 +1,7 @@
-simpleble
+m-voice
 =========
 
 .. toctree::
    :maxdepth: 4
 
-   simpleble
+   m-voice

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Overview: module code &mdash; m-voice 0.0.1 documentation</title>
+  <title>remove_ignore_entities &mdash; m-voice 0.0.1 documentation</title>
   
 
   
@@ -126,7 +126,9 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>Overview: module code</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>remove_ignore_entities</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -141,11 +143,30 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <h1>All modules for which code is available</h1>
-<ul><li><a href="datahandle.html">datahandle</a></li>
-<li><a href="main.html">main</a></li>
-<li><a href="remove_ignore_entities.html">remove_ignore_entities</a></li>
-</ul>
+  <h1>Source code for remove_ignore_entities</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+
+
+<div class="viewcode-block" id="removeIgnoreEntities"><a class="viewcode-back" href="../m-voice.html#remove_ignore_entities.removeIgnoreEntities">[docs]</a><span class="k">def</span> <span class="nf">removeIgnoreEntities</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes entity terms to be ignored found in ``ignore.json`` when comparing current local data and potentially updated MDining API data.</span>
+
+<span class="sd">    :param data: List of items in current version of specified entity</span>
+<span class="sd">    :type data: list</span>
+<span class="sd">    :param category: Entity category of the search term (&#39;Location&#39;/&#39;Meal&#39;)</span>
+<span class="sd">    :type category: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;ignore.json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+      <span class="n">ignoredata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">newdata</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="n">copy</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">ignoreterm</span> <span class="ow">in</span> <span class="n">ignoredata</span><span class="p">[</span><span class="n">category</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="n">ignoreterm</span><span class="p">):</span>
+                <span class="n">copy</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+            <span class="n">newdata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">newdata</span></div>
+</pre></div>
 
            </div>
            
