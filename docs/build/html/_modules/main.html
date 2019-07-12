@@ -1,0 +1,521 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>main &mdash; m-voice 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> m-voice
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../m-voice.html">Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">m-voice</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>main</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for main</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="k">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">Response</span><span class="p">,</span> <span class="n">abort</span>
+<span class="kn">import</span> <span class="nn">json</span><span class="o">,</span> <span class="nn">requests</span><span class="o">,</span> <span class="nn">urllib.parse</span><span class="o">,</span><span class="nn">urllib.request</span>
+<span class="kn">import</span> <span class="nn">filecmp</span><span class="o">,</span> <span class="nn">difflib</span><span class="o">,</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="k">import</span> <span class="n">datastore</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">remove_ignore_entities</span> <span class="k">import</span> <span class="n">removeIgnoreEntities</span>
+<span class="kn">from</span> <span class="nn">datahandle</span> <span class="k">import</span> <span class="n">requestLocationAndMeal</span><span class="p">,</span> <span class="n">requestItem</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">###Helper functions</span>
+
+<span class="c1">#Authentication</span>
+<span class="k">def</span> <span class="nf">check_auth</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">passw</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">name</span><span class="o">==</span><span class="s1">&#39;user&#39;</span> <span class="ow">and</span> <span class="n">passw</span><span class="o">==</span><span class="s1">&#39;pass&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">requires_auth</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">decorated</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">auth</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">authorization</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">auth</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">check_auth</span><span class="p">(</span><span class="n">auth</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="n">auth</span><span class="o">.</span><span class="n">password</span><span class="p">):</span>
+            <span class="n">abort</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">decorated</span>
+
+<div class="viewcode-block" id="isPartialTerm"><a class="viewcode-back" href="../m-voice.html#main.isPartialTerm">[docs]</a><span class="k">def</span> <span class="nf">isPartialTerm</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks if input term is part of a larger official term by looking for any matches with split up versions of regular terms.</span>
+
+<span class="sd">    :param search: The searched term (e.g. &#39;north quad&#39;)</span>
+<span class="sd">    :type search: string</span>
+<span class="sd">    :param filename: Name of the file the term is being searched for in (&#39;LocationExtra.txt&#39;)</span>
+<span class="sd">    :type filename: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">list_data</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">search</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\r</span><span class="s2">&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="similarSearch"><a class="viewcode-back" href="../m-voice.html#main.similarSearch">[docs]</a><span class="k">def</span> <span class="nf">similarSearch</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">category</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handles user input that doesn&#39;t match official terms exactly using `isPartialTerm`. If input ``search`` is a partial term of any official terms, returns list of recommended official terms.</span>
+
+<span class="sd">    :param search: The searched term (e.g. &#39;north quad&#39;)</span>
+<span class="sd">    :type search: string</span>
+<span class="sd">    :param category: Entity category of the search term (&#39;Location&#39;/&#39;Meal&#39;)</span>
+<span class="sd">    :type filename: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1">#Check type of term and adjust file searched accordingly</span>
+    <span class="k">if</span> <span class="n">category</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;LOCATION&#39;</span><span class="p">:</span>
+        <span class="n">extrasFilename</span> <span class="o">=</span> <span class="s1">&#39;LocationExtra.txt&#39;</span>
+        <span class="n">mainFilename</span> <span class="o">=</span> <span class="s1">&#39;LocationMain.txt&#39;</span>
+    <span class="k">elif</span> <span class="n">category</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;MEAL&#39;</span><span class="p">:</span>
+        <span class="n">extrasFilename</span> <span class="o">=</span> <span class="s1">&#39;MealExtra.txt&#39;</span>
+        <span class="n">mainFilename</span> <span class="o">=</span> <span class="s1">&#39;MealMain.txt&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;File error&quot;</span>
+
+    <span class="c1">#Check if input term is part of a larger official term</span>
+    <span class="k">if</span> <span class="n">isPartialTerm</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">extrasFilename</span><span class="p">)</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;Found&quot;</span>
+
+    <span class="c1">#If it is, suggest possible full terms</span>
+    
+    <span class="c1">#Go through list of full terms and check for possibilities</span>
+    <span class="n">list_data</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">mainFilename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+    <span class="n">possible_searches</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">search</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\r</span><span class="s2">&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+            <span class="n">possible_searches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\r</span><span class="s2">&quot;</span><span class="p">)))</span>
+
+    <span class="c1">#Suggest list of possibilities</span>
+    <span class="n">outputstring</span> <span class="o">=</span> <span class="s2">&quot;Did you mean &quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">possible_searches</span><span class="p">:</span>
+        <span class="n">outputstring</span> <span class="o">+=</span> <span class="n">i</span>
+        <span class="n">outputstring</span> <span class="o">+=</span> <span class="s1">&#39; or &#39;</span>
+    
+    <span class="k">return</span> <span class="n">outputstring</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;?&#39;</span></div>
+
+<div class="viewcode-block" id="findLocationAndMeal"><a class="viewcode-back" href="../m-voice.html#main.findLocationAndMeal">[docs]</a><span class="k">def</span> <span class="nf">findLocationAndMeal</span><span class="p">(</span><span class="n">req_data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dialogflow ``findLocationAndMeal`` intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.</span>
+
+<span class="sd">    :param req_data: Dialogflow POST request data</span>
+<span class="sd">    :type req_data: JSON</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="n">locationEntered</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">mealEntered</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">meal_in</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">loc_in</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>    
+    <span class="c1">#Check for Location and Meal parameters in Dialogflow request</span>
+    <span class="k">if</span> <span class="s1">&#39;Location&#39;</span> <span class="ow">in</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">]:</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="s1">&#39;Location&#39;</span>
+        <span class="n">search</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Location&#39;</span><span class="p">]</span>
+        <span class="n">loc_in</span> <span class="o">=</span> <span class="n">search</span>
+        <span class="n">parameters</span><span class="p">[</span><span class="n">category</span><span class="p">]</span> <span class="o">=</span> <span class="n">category</span> 
+        <span class="n">locationEntered</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="s1">&#39;Meal&#39;</span> <span class="ow">in</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">locationEntered</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">category</span> <span class="o">=</span> <span class="s1">&#39;Meal&#39;</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Meal&#39;</span><span class="p">]</span>
+            <span class="n">meal_in</span> <span class="o">=</span> <span class="n">search</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="n">category</span><span class="p">]</span> <span class="o">=</span> <span class="n">category</span>
+        <span class="n">mealEntered</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="c1">#Error if neither are found</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">locationEntered</span> <span class="o">==</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">mealEntered</span> <span class="o">==</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">search</span> <span class="o">=</span> <span class="s1">&#39;Error&#39;</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="s1">&#39;Error&#39;</span>
+
+    <span class="c1">#Handle search for location or meal, location first if both parameters are in request</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">similarSearch</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">category</span><span class="p">)</span>
+    
+    <span class="c1">#Setting up response data</span>
+    <span class="n">responsedata</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;fulfillmentText&#39;</span><span class="p">:</span> <span class="n">text</span> <span class="p">}</span>
+
+    <span class="c1">#Text is valid    </span>
+    <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s1">&#39;Found&#39;</span><span class="p">:</span> 
+        <span class="n">validParams</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1">#If both location and meal parameters included in request, now handle meal</span>
+        <span class="k">if</span> <span class="n">locationEntered</span> <span class="ow">and</span> <span class="n">mealEntered</span><span class="p">:</span>
+            <span class="n">category</span> <span class="o">=</span> <span class="s1">&#39;Meal&#39;</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Meal&#39;</span><span class="p">]</span>
+            <span class="n">meal_in</span> <span class="o">=</span> <span class="n">search</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">similarSearch</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">category</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">text</span> <span class="o">==</span> <span class="s1">&#39;Found&#39;</span><span class="p">:</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="n">category</span><span class="p">]</span> <span class="o">=</span> <span class="n">category</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">validParams</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1">#If location/meal/both search is fully valid, send response triggering Dialogflow event</span>
+        <span class="k">if</span> <span class="n">validParams</span><span class="p">:</span>
+            <span class="n">outputcontextparams</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;outputContexts&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                
+                <span class="k">if</span> <span class="s1">&#39;Location&#39;</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;Meal&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputcontextparams</span><span class="p">):</span>
+                    <span class="n">eventname</span> <span class="o">=</span> <span class="s1">&#39;valid_location&#39;</span>
+                    <span class="n">responsedata</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;fulfillmentText&#39;</span><span class="p">:</span> <span class="s1">&#39;What meal would you like?&#39;</span> <span class="p">}</span>
+
+                <span class="k">elif</span> <span class="s1">&#39;Meal&#39;</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;Location&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputcontextparams</span><span class="p">):</span>
+                    <span class="n">eventname</span> <span class="o">=</span> <span class="s1">&#39;valid_meal&#39;</span>
+                    <span class="n">responsedata</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;fulfillmentText&#39;</span><span class="p">:</span> <span class="s1">&#39;Which dining location?&#39;</span> <span class="p">}</span>
+                    
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;Location&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                        <span class="n">loc_in</span>  <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;outputContexts&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Location&#39;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="s1">&#39;Meal&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                        <span class="n">meal_in</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;outputContexts&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Meal&#39;</span><span class="p">]</span>
+                    <span class="n">date_in</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+                    <span class="n">responsedata</span><span class="p">[</span><span class="s1">&#39;fulfillmentText&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">requestLocationAndMeal</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">date_in</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+                <span class="n">responsedata</span><span class="p">[</span><span class="s1">&#39;fulfillmentText&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">requestLocationAndMeal</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">)</span>
+                
+        <span class="c1">#Else, send suggestion to user for the parameter that was invalid</span>
+        <span class="c1">#If both parameters invalid, prioritize location</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">responsedata</span><span class="p">[</span><span class="s1">&#39;fulfillmentText&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span>
+
+    <span class="k">return</span> <span class="n">responsedata</span></div>
+
+<span class="c1">#findItem intent handling</span>
+<span class="k">def</span> <span class="nf">findItem</span><span class="p">(</span><span class="n">req_data</span><span class="p">):</span>
+    
+    <span class="n">date_in</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+    <span class="n">loc_in</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Location&#39;</span><span class="p">]</span>
+    <span class="n">item_in</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;any&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s1">&#39;Meal&#39;</span> <span class="ow">in</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">]:</span>
+        <span class="n">meal_in</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;parameters&#39;</span><span class="p">][</span><span class="s1">&#39;Meal&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">meal_in</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        
+    <span class="k">return</span> <span class="n">requestItem</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">,</span> <span class="n">item_in</span><span class="p">)</span>
+
+
+
+<span class="c1">#########################################################################</span>
+<span class="c1">###Primary Handler Functions</span>
+
+<span class="c1">#Basic homepage for checking successful deployment</span>
+<div class="viewcode-block" id="home"><a class="viewcode-back" href="../m-voice.html#main.home">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">home</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Web app home page for quick successful deployment check.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;Success&quot;</span></div>
+
+<span class="c1">#Webhook call</span>
+<div class="viewcode-block" id="webhookPost"><a class="viewcode-back" href="../m-voice.html#main.webhookPost">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/webhook&#39;</span><span class="p">,</span><span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="nd">@requires_auth</span>
+<span class="k">def</span> <span class="nf">webhookPost</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Dialogflow webhook POST Request handler requiring authentication. Uses `findLocationAndMeal` or `findItem` intent handlers and returns appropriate JSON response.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">req_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+
+
+    <span class="n">intentname</span> <span class="o">=</span> <span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;queryResult&#39;</span><span class="p">][</span><span class="s1">&#39;intent&#39;</span><span class="p">][</span><span class="s1">&#39;displayName&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">intentname</span> <span class="o">==</span> <span class="s1">&#39;findLocationAndMeal&#39;</span><span class="p">:</span>
+        <span class="n">responsedata</span> <span class="o">=</span> <span class="n">findLocationAndMeal</span><span class="p">(</span><span class="n">req_data</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">intentname</span> <span class="o">==</span> <span class="s1">&#39;findItem&#39;</span><span class="p">:</span>
+        <span class="n">responsedata</span> <span class="o">=</span> <span class="n">findItem</span><span class="p">(</span><span class="n">req_data</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span> <span class="p">(</span> <span class="n">responsedata</span> <span class="p">)</span></div>
+
+<span class="c1">#Google Cron update handler</span>
+<div class="viewcode-block" id="cronUpdate"><a class="viewcode-back" href="../m-voice.html#main.cronUpdate">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/cron&#39;</span><span class="p">,</span><span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">cronUpdate</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Google Cloud Platform scheduled CRON request handler. Checks for changes to MDining API data (Location/Meal), sends notification to Slack channel if change detected. Ignores changes to specified terms in ``ignore.json`` file. Authenticates requests by checking for user and passw in POST request body.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#Cron authentication through post request data</span>
+    <span class="n">req_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="n">responsedata</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="c1">#Get secret values from Datastore environment variables</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">datastore</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">kind</span> <span class="o">=</span> <span class="s1">&#39;env_vars&#39;</span><span class="p">)</span>
+    <span class="n">entity</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">fetch</span><span class="p">()</span>
+
+    <span class="n">secrets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">entity</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">slackurl</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;slack_api&#39;</span><span class="p">)</span>
+    <span class="n">passw</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pass&#39;</span><span class="p">)</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">user</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">req_data</span><span class="p">[</span><span class="s1">&#39;pass&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">passw</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;Authentication failed.&#39;</span>
+        
+    <span class="k">else</span><span class="p">:</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;ignore.json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">ignoredata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">mealchanged</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">locationchanged</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="c1">#Meal Diff</span>
+        <span class="n">mealreq</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;http://api.studentlife.umich.edu/menu/menu_generator/meal.php&#39;</span><span class="p">)</span>
+        <span class="n">mealdata</span> <span class="o">=</span> <span class="n">mealreq</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="n">newmeal</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">mealdata</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;optionValue&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">newmeal</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;optionValue&#39;</span><span class="p">])</span>
+
+        <span class="n">originalmealfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;MealMain.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="n">originalmeal</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">originalmealfile</span><span class="p">:</span>
+            <span class="n">originalmeal</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+
+        <span class="n">originalmeal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">removeIgnoreEntities</span><span class="p">(</span><span class="n">originalmeal</span><span class="p">,</span> <span class="s1">&#39;Meal&#39;</span><span class="p">))</span>
+        <span class="n">newmeal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">removeIgnoreEntities</span><span class="p">(</span><span class="n">newmeal</span><span class="p">,</span> <span class="s1">&#39;Meal&#39;</span><span class="p">))</span>
+
+
+        <span class="n">mealremoved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">originalmeal</span><span class="p">,</span> <span class="n">newmeal</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">mealadded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">newmeal</span><span class="p">,</span> <span class="n">originalmeal</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">mealchanged</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">mealremoved</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">mealadded</span><span class="p">):</span>
+            <span class="n">mealchanged</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+        <span class="c1">#Location Diff</span>
+        <span class="n">locationreq</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;http://api.studentlife.umich.edu/menu/menu_generator/location.php&#39;</span><span class="p">)</span>
+        <span class="n">locationdata</span> <span class="o">=</span> <span class="n">locationreq</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="n">newlocation</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">locationdata</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;optionValue&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">newlocation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;optionValue&#39;</span><span class="p">])</span>
+
+        <span class="n">originallocationfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;LocationMain.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="n">originallocation</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">originallocationfile</span><span class="p">:</span>
+            <span class="n">originallocation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+
+        <span class="n">originallocation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">removeIgnoreEntities</span><span class="p">(</span><span class="n">originallocation</span><span class="p">,</span> <span class="s1">&#39;Location&#39;</span><span class="p">))</span>
+        <span class="n">newlocation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">removeIgnoreEntities</span><span class="p">(</span><span class="n">newlocation</span><span class="p">,</span> <span class="s1">&#39;Location&#39;</span><span class="p">))</span>
+
+        <span class="n">locationremoved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">originallocation</span><span class="p">,</span> <span class="n">newlocation</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">locationadded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">newlocation</span><span class="p">,</span> <span class="n">originallocation</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">locationchanged</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">locationremoved</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">locationadded</span><span class="p">):</span>
+            <span class="n">locationchanged</span> <span class="o">=</span> <span class="kc">True</span>
+
+        
+        <span class="c1">#Check for file changes for appropriate response to slack if needed</span>
+        <span class="k">if</span> <span class="n">locationchanged</span> <span class="ow">or</span> <span class="n">mealchanged</span><span class="p">:</span>
+            <span class="n">slackresponse</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;attachments&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;Update needed for &quot;</span>
+            <span class="k">if</span> <span class="n">locationchanged</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot;location&quot;</span>
+                <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">locationadded</span><span class="p">):</span>
+                    <span class="n">newlocationsstr</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">locationadded</span><span class="p">:</span>
+                        <span class="n">newlocationsstr</span> <span class="o">=</span> <span class="n">newlocationsstr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;attachments&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;New locations&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">newlocationsstr</span> <span class="p">}</span> <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">locationremoved</span><span class="p">):</span>
+                    <span class="n">removedlocationsstr</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">locationremoved</span><span class="p">:</span>
+                        <span class="n">removedlocationsstr</span> <span class="o">=</span> <span class="n">removedlocationsstr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;attachments&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Removed locations&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">removedlocationsstr</span> <span class="p">}</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="n">mealchanged</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">mealadded</span><span class="p">):</span>
+                    <span class="n">newmealsstr</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mealadded</span><span class="p">:</span>
+                        <span class="n">newmealsstr</span> <span class="o">=</span> <span class="n">newmealsstr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;attachments&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;New meals&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">newmealsstr</span> <span class="p">}</span> <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">mealremoved</span><span class="p">):</span>
+                    <span class="n">removedmealsstr</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mealremoved</span><span class="p">:</span>
+                        <span class="n">removedmealsstr</span> <span class="o">=</span> <span class="n">removedmealsstr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;attachments&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Removed meals&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">removedmealsstr</span> <span class="p">}</span> <span class="p">)</span>
+                <span class="k">if</span> <span class="n">locationchanged</span><span class="p">:</span>
+                    <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot; and meal&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot;meal&quot;</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot; in m-voice.&quot;</span>
+            
+            <span class="n">slackresponse</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">message</span>
+
+            <span class="n">slackpostdata</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">slackurl</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">slackresponse</span><span class="p">)</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;Data up to date&quot;</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span>
+      <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+      <span class="n">locationadded</span><span class="o">=</span><span class="n">locationadded</span><span class="p">,</span>
+      <span class="n">locationremoved</span><span class="o">=</span><span class="n">locationremoved</span><span class="p">,</span>
+      <span class="n">mealadded</span><span class="o">=</span><span class="n">mealadded</span><span class="p">,</span>
+      <span class="n">mealremoved</span><span class="o">=</span><span class="n">mealremoved</span>
+<span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, University of Michigan ITS
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

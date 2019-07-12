@@ -1,0 +1,408 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Documentation &mdash; m-voice 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to m-voice’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> m-voice
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-main">main.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-datahandle">datahandle.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-remove_ignore_entities">remove_ignore_entities.py</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">m-voice</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/m-voice.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-main">
+<span id="main-py"></span><h2>main.py<a class="headerlink" href="#module-main" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="main.cronUpdate">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">cronUpdate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#cronUpdate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.cronUpdate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Google Cloud Platform scheduled CRON request handler. Checks for changes to MDining API data (Location/Meal), sends notification to Slack channel if change detected. Ignores changes to specified terms in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code> file. Authenticates requests by checking for user and passw in POST request body.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.findLocationAndMeal">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">findLocationAndMeal</code><span class="sig-paren">(</span><em class="sig-param">req_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#findLocationAndMeal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.findLocationAndMeal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dialogflow <code class="docutils literal notranslate"><span class="pre">findLocationAndMeal</span></code> intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>req_data</strong> (<em>JSON</em>) – Dialogflow POST request data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.home">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">home</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#home"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.home" title="Permalink to this definition">¶</a></dt>
+<dd><p>Web app home page for quick successful deployment check.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.isPartialTerm">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">isPartialTerm</code><span class="sig-paren">(</span><em class="sig-param">search</em>, <em class="sig-param">filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#isPartialTerm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.isPartialTerm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if input term is part of a larger official term by looking for any matches with split up versions of regular terms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>search</strong> (<em>string</em>) – The searched term (e.g. ‘north quad’)</p></li>
+<li><p><strong>filename</strong> (<em>string</em>) – Name of the file the term is being searched for in (‘LocationExtra.txt’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.similarSearch">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">similarSearch</code><span class="sig-paren">(</span><em class="sig-param">search</em>, <em class="sig-param">category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#similarSearch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.similarSearch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles user input that doesn’t match official terms exactly using <cite>isPartialTerm</cite>. If input <code class="docutils literal notranslate"><span class="pre">search</span></code> is a partial term of any official terms, returns list of recommended official terms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>search</strong> (<em>string</em>) – The searched term (e.g. ‘north quad’)</p></li>
+<li><p><strong>category</strong> – Entity category of the search term (‘Location’/’Meal’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="main.webhookPost">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">webhookPost</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#webhookPost"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.webhookPost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dialogflow webhook POST Request handler requiring authentication. Uses <cite>findLocationAndMeal</cite> or <cite>findItem</cite> intent handlers and returns appropriate JSON response.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-datahandle">
+<span id="datahandle-py"></span><h2>datahandle.py<a class="headerlink" href="#module-datahandle" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="datahandle.checkCourseAvailable">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">checkCourseAvailable</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">course</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#checkCourseAvailable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.checkCourseAvailable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches response data to check if course is available in specified meal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p></li>
+<li><p><strong>course</strong> (<em>string</em>) – Name of course</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.checkMealAvailable">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">checkMealAvailable</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">meal</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#checkMealAvailable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.checkMealAvailable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches response data to check if meal is available at specified location/date.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p></li>
+<li><p><strong>meal</strong> (<em>string</em>) – Name of meal</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.findItemFormatting">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">findItemFormatting</code><span class="sig-paren">(</span><em class="sig-param">possiblematches</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#findItemFormatting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.findItemFormatting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Formatting list of possible matches into more natural sentence structure by removing redundancy:
+[Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -&gt; [Chicken, chicken wings during lunch, and chicken patty during dinner]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>possiblematches</strong> (<em>list</em>) – List of food items in data that matched user input</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.findMatches">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">findMatches</code><span class="sig-paren">(</span><em class="sig-param">coursedata</em>, <em class="sig-param">possiblematches</em>, <em class="sig-param">item_in</em>, <em class="sig-param">mealname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#findMatches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.findMatches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Appends matches of specified food item in data of an individual course to list of possible matches.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coursedata</strong> (<em>JSON</em>) – Chosen course subsection of MDining API HTTP response data</p></li>
+<li><p><strong>possiblematches</strong> (<em>list</em>) – List of food items in data that matched user input</p></li>
+<li><p><strong>item_in</strong> (<em>string</em>) – User input food item</p></li>
+<li><p><strong>mealname</strong> (<em>string</em>) – Name of meal</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.getCoursesAndItems">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">getCoursesAndItems</code><span class="sig-paren">(</span><em class="sig-param">data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#getCoursesAndItems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.getCoursesAndItems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.getItemsInCourse">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">getItemsInCourse</code><span class="sig-paren">(</span><em class="sig-param">coursedata</em>, <em class="sig-param">course</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#getItemsInCourse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.getItemsInCourse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coursedata</strong> (<em>JSON</em>) – Chosen course subsection of MDining API HTTP response data</p></li>
+<li><p><strong>course</strong> (<em>string</em>) – Name of course</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.removeSpaces">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">removeSpaces</code><span class="sig-paren">(</span><em class="sig-param">url_block</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#removeSpaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.removeSpaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes spaces in url string to create valid url string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>url_block</strong> – The url string to be manipulated</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.requestItem">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">requestItem</code><span class="sig-paren">(</span><em class="sig-param">date_in</em>, <em class="sig-param">loc_in</em>, <em class="sig-param">meal_in</em>, <em class="sig-param">item_in</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#requestItem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.requestItem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from <code class="docutils literal notranslate"><span class="pre">findItem</span></code> intent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_in</strong> (<em>string</em>) – Input date</p></li>
+<li><p><strong>loc_in</strong> (<em>string</em>) – Input location</p></li>
+<li><p><strong>meal_in</strong> (<em>string</em>) – Input meal</p></li>
+<li><p><strong>item_in</strong> (<em>string</em>) – Input food item</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandle.requestLocationAndMeal">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">requestLocationAndMeal</code><span class="sig-paren">(</span><em class="sig-param">date_in</em>, <em class="sig-param">loc_in</em>, <em class="sig-param">meal_in</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#requestLocationAndMeal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.requestLocationAndMeal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles searching for appropriate data response for valid specified location and meal entities from <code class="docutils literal notranslate"><span class="pre">findLocationAndMeal</span></code> intent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_in</strong> (<em>string</em>) – Input date</p></li>
+<li><p><strong>loc_in</strong> (<em>string</em>) – Input location</p></li>
+<li><p><strong>meal_in</strong> (<em>string</em>) – Input meal</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-remove_ignore_entities">
+<span id="remove-ignore-entities-py"></span><h2>remove_ignore_entities.py<a class="headerlink" href="#module-remove_ignore_entities" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="remove_ignore_entities.removeIgnoreEntities">
+<code class="sig-prename descclassname">remove_ignore_entities.</code><code class="sig-name descname">removeIgnoreEntities</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/remove_ignore_entities.html#removeIgnoreEntities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#remove_ignore_entities.removeIgnoreEntities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes entity terms to be ignored found in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code> when comparing current local data and potentially updated MDining API data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>list</em>) – List of items in current version of specified entity</p></li>
+<li><p><strong>category</strong> (<em>string</em>) – Entity category of the search term (‘Location’/’Meal’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to m-voice’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, University of Michigan ITS
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
