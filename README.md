@@ -6,8 +6,9 @@ Voice interface implementation for University of Michigan applications using Dia
 
 
 ---
+*Backend workflow:* 
 
-Dialogflow submits `POST` request to https://vast-castle-65537.herokuapp.com/webhook
+Dialogflow submits `POST` request to flask server webhook.
 
 Flask server receives request and extracts key information:
 * Parameters: `responsedata['queryResult']['parameters']['parameter_name'] = parameter_value`
