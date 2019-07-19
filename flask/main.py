@@ -212,11 +212,15 @@ def findLocationAndMeal(req_data):
                 
             else:
                 startText += ('On ' + Date_original)
-            
-        if startText:
-            startText += ' there is '
+
+        if 'No meal is available' not in temporaryResponse:
+            if startText:
+                startText += ' there is '
+            else:
+                startText += 'There is '
         else:
-            startText += 'There is '
+            startText += ' '
+            temporaryResponse= temporaryResponse[0].lower() + temporaryResponse[1:]
             
         startText += (temporaryResponse + '.')
         responsedata['followupEventInput']['parameters']['Data'] = startText
