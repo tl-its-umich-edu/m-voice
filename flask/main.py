@@ -78,34 +78,66 @@ def similarSearch(search, category):
     
     return outputstring[:-4] + '?'
 
-def findLocationAndMeal(req_data):
-    """Dialogflow ``findLocationAndMeal`` intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.
 
-    :param req_data: Dialogflow POST request data
-    :type req_data: JSON
+
+def addFollowupEventInput(responsedata, outputParams):
+    """Helper function for adding followupEventInput trigger to send data to queryHelper intent.
+
+    :param responsedata: The HTTP response data
+    :type responsedata: dict
+    :param outputParams: Output context paramaters to send to queryHelper
+    :type outputParams: dict
     """
-    parameters = {}
-    
-    locationEntered = False
-    mealEntered = False
-    meal_in = ""
-    loc_in = ""    
+    responsedata['followupEventInput'] = {
+        'name': 'queryHelperEvent',
+        'parameters': outputParams
+    }
+    return responsedata
+
+def requiredEntitiesHandler(req_data, intentname):
+    """Handles response for intents with 2 entities that are both required and need to be handled manually, returns approriate parameters for specific intent handler to take care of.
+
+    :param req_data: The HTTP response data
+    :type req_data: JSON
+    :param intentname: Output context paramaters to send to queryHelper
+    :type intentname: string
+    """
+    if intentname == 'findLocationAndMeal':
+        entity1 = 'Location'
+        entity2 = 'Meal'
+        entity1OutputContext = 'LocationOutputContext'
+        entity2OutputContext = 'MealOutputContext'
+        entity1Question = 'Which dining location?'
+        entity2Question = 'What meal would you like?'
+
+
+    entity1Entered = False
+    entity2Entered = False
+    entity2_in = ""
+    entity1_in = ""
+
+
+    inputParams = req_data['queryResult']['parameters']
+    outputParams = {}
+
     #Check for Location and Meal parameters in Dialogflow request
-    if 'Location' in req_data['queryResult']['parameters']:
-        category = 'Location'
-        search = req_data['queryResult']['parameters']['Location']
-        loc_in = search
-        parameters[category] = category 
-        locationEntered = True
-    if 'Meal' in req_data['queryResult']['parameters']:
-        if locationEntered == False:
-            category = 'Meal'
-            search = req_data['queryResult']['parameters']['Meal']
-            meal_in = search
-            parameters[category] = category
-        mealEntered = True
+    if inputParams[entity1]:
+        category = entity1
+        search = req_data['queryResult']['parameters'][entity1]
+        entity1_in = search
+        outputParams[category] = search
+        entity1Entered = True
+        
+    if inputParams[entity2]:
+        if entity1Entered == False:
+            category = entity2
+            search = req_data['queryResult']['parameters'][entity2]
+            entity2_in = search
+            outputParams[category] = search
+        entity2Entered = True
+        
     #Error if neither are found
-    if (locationEntered == False) and (mealEntered == False):
+    if (entity1Entered == False) and (entity2Entered == False):
         search = 'Error'
         category = 'Error'
 
@@ -113,70 +145,126 @@ def findLocationAndMeal(req_data):
     text = similarSearch(search, category)
     
     #Setting up response data
-    responsedata = { 'fulfillmentText': text }
-
+    responsedata = {}
+    
     #Text is valid    
-    if text == 'Found': 
+    if text == 'Found':
         validParams = True
-
+        
+        if entity1Entered:
+            outputParams[entity1 + 'OutputContext'] = search
+        elif entity2Entered:
+            outputParams[entity2 + 'OutputContext'] = search
+    
+        additionalOutputParams = req_data['queryResult']['outputContexts'][0]['parameters']
+        if entity1OutputContext in additionalOutputParams and inputParams[entity1] == '':
+            inputParams[entity1] = additionalOutputParams[entity1OutputContext]
+        if entity2OutputContext in additionalOutputParams and inputParams[entity2] == '':
+            inputParams[entity2] = additionalOutputParams[entity2OutputContext]
+       
         #If both location and meal parameters included in request, now handle meal
-        if locationEntered and mealEntered:
-            category = 'Meal'
-            search = req_data['queryResult']['parameters']['Meal']
-            meal_in = search
+        if entity1Entered and entity2Entered:
+            category = entity2
+            search = inputParams[entity2]
+            entity2_in = search
             text = similarSearch(search, category)
-            
+
             if text == 'Found':
-                parameters[category] = category
+                outputParams[category] = search
+                outputParams[category + 'OutputContext'] = search
             else:
                 validParams = False
 
         #If location/meal/both search is fully valid, send response triggering Dialogflow event
         if validParams:
-            outputcontextparams = req_data['queryResult']['outputContexts'][0]['parameters']
-            if len(parameters) == 1:
-                
-                if 'Location' in parameters and ('Meal' not in outputcontextparams):
-                    eventname = 'valid_location'
-                    responsedata = { 'fulfillmentText': 'What meal would you like?' }
 
-                elif 'Meal' in parameters and ('Location' not in outputcontextparams):
-                    eventname = 'valid_meal'
-                    responsedata = { 'fulfillmentText': 'Which dining location?' }
+            if len(outputParams) <= 2:
+                if entity1 in outputParams and (inputParams[entity2] == ''):
+                    outputParams['Data'] = entity2Question
+                    responsedata = addFollowupEventInput(responsedata, outputParams)
+
+                elif entity2 in outputParams and (inputParams[entity1] == ''):
+                    outputParams['Data'] = entity1Question
+                    responsedata = addFollowupEventInput(responsedata, outputParams)
                     
                 else:
-                    if 'Location' not in parameters:
-                        loc_in  = req_data['queryResult']['outputContexts'][0]['parameters']['Location']
-                    if 'Meal' not in parameters:
-                        meal_in = req_data['queryResult']['outputContexts'][0]['parameters']['Meal']
+                    
+                    if entity1 not in outputParams:
+                        entity1_in  = inputParams[entity1]
+                    if entity2 not in outputParams:
+                        entity2_in = inputParams[entity2]
+
                     date_in = datetime.date.today()
-                    responsedata['fulfillmentText'] = requestLocationAndMeal(date_in, loc_in, meal_in)
+                    outputParams['Data'] = [date_in, entity1_in, entity2_in]
+                    responsedata = addFollowupEventInput(responsedata, outputParams)
+            
             else:
                 date_in = datetime.date.today()
-                responsedata['fulfillmentText'] = requestLocationAndMeal(date_in, loc_in, meal_in)
+                outputParams['Data'] = [date_in, entity1_in, entity2_in]
+                responsedata = addFollowupEventInput(responsedata, outputParams)
+                
                 
         #Else, send suggestion to user for the parameter that was invalid
         #If both parameters invalid, prioritize location
         else:
-            responsedata['fulfillmentText'] = text
+            outputParams['Data'] = text
+            responsedata = addFollowupEventInput(responsedata, outputParams)
+    else:
+        outputParams['Data'] = text
+        responsedata = addFollowupEventInput(responsedata, outputParams)
 
+    return responsedata
+
+
+def findLocationAndMeal(req_data):
+    """Dialogflow ``findLocationAndMeal`` intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.
+
+    :param req_data: Dialogflow POST request data
+    :type req_data: JSON
+    """
+    responsedata = requiredEntitiesHandler(req_data, 'findLocationAndMeal')
+    if 'followupEventInput' in responsedata:
+        data = responsedata['followupEventInput']['parameters']['Data']
+        if type(data) is list:
+            responsedata['followupEventInput']['parameters']['Data'] = requestLocationAndMeal(data[0],data[1],data[2])
+            
     return responsedata
 
 #findItem intent handling
 def findItem(req_data):
-    
+    """Dialogflow ``findItem`` intent handler. Checks for valid Location and Item and sends HTTP response with appropriate data.
+
+    :param req_data: Dialogflow POST request data
+    :type req_data: JSON
+    """
+    responsedata = {}
+    outputParams = {}
+
     date_in = datetime.date.today()
     loc_in = req_data['queryResult']['parameters']['Location']
-    item_in = req_data['queryResult']['parameters']['any']
+    item_in = req_data['queryResult']['parameters']['Item']
     if 'Meal' in req_data['queryResult']['parameters']:
         meal_in = req_data['queryResult']['parameters']['Meal']
     else:
         meal_in = ''
-        
-    return requestItem(date_in, loc_in, meal_in, item_in)
+    
 
+    text = similarSearch(loc_in, 'Location')
+    if text == 'Found':
+        outputParams['Data'] = requestItem(date_in, loc_in,
+                                           req_data['queryResult']['parameters']['Item'], meal_in)['fulfillmentText']
+                
+        outputParams['LocationOutputContext'] = loc_in
+        responsedata = addFollowupEventInput(responsedata, outputParams)
+                        
+    else:
+        outputParams['Data'] = text  
+        responsedata = addFollowupEventInput(responsedata, outputParams)
+            
+    responsedata = addFollowupEventInput(responsedata, outputParams)
+    
 
-
+    return responsedata
 #########################################################################
 ###Primary Handler Functions
 
@@ -194,19 +282,28 @@ def webhookPost():
     """Dialogflow webhook POST Request handler requiring authentication. Uses `findLocationAndMeal` or `findItem` intent handlers and returns appropriate JSON response.
     """
     req_data = request.get_json()
-
-
+    
     intentname = req_data['queryResult']['intent']['displayName']
-    if intentname == 'findLocationAndMeal':
+
+    if 'queryHelper' in intentname:
+        responsedata = ''
+        for i in req_data['queryResult']['outputContexts']:
+            if 'parameters' in i:
+                if 'Data' in i['parameters']:
+                    responsedata = i['parameters']['Data']
+                    break
+        responsedata = { 'fulfillmentText': responsedata }
+    elif 'findLocationAndMeal' in intentname:
         responsedata = findLocationAndMeal(req_data)
-    elif intentname == 'findItem':
+    elif 'findItem' in intentname:
         responsedata = findItem(req_data)
+
 
     return jsonify ( responsedata )
 
 #Google Cron update handler
 @app.route('/cron',methods=['POST'])
-def cronUpdate():
+def cronUpdate(): 
     """Google Cloud Platform scheduled CRON request handler. Checks for changes to MDining API data (Location/Meal), sends notification to Slack channel if change detected. Ignores changes to specified terms in ``ignore.json`` file. Authenticates requests by checking for user and passw in POST request body.
     """
     #Cron authentication through post request data
