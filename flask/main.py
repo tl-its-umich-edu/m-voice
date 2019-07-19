@@ -102,118 +102,80 @@ def requiredEntitiesHandler(req_data, intentname):
     :param intentname: Output context paramaters to send to queryHelper
     :type intentname: string
     """
-    if intentname == 'findLocationAndMeal':
-        entity1 = 'Location'
-        entity2 = 'Meal'
-        entity1OutputContext = 'LocationOutputContext'
-        entity2OutputContext = 'MealOutputContext'
-        entity1Question = 'Which dining location?'
-        entity2Question = 'What meal would you like?'
+    class Entity:
+        def __init__(self, name, output_context, question):
+            self.name = name
+            self.output_context = output_context
+            self.question = question
+        
+    entities = [Entity('Location','LocationOutputContext','Which dining location?'),
+                Entity('Meal','MealOutputContext','What meal would you like?')]
 
-
-    entity1Entered = False
-    entity2Entered = False
-    entity2_in = ""
-    entity1_in = ""
-
-
+    #Setting up variables
     inputParams = req_data['queryResult']['parameters']
+    additionalOutputParams = req_data['queryResult']['outputContexts'][0]['parameters']
+
+    
     outputParams = {}
-
-    #Check for Location and Meal parameters in Dialogflow request
-    if inputParams[entity1]:
-        category = entity1
-        search = req_data['queryResult']['parameters'][entity1]
-        entity1_in = search
-        outputParams[category] = search
-        entity1Entered = True
-        
-    if inputParams[entity2]:
-        if entity1Entered == False:
-            category = entity2
-            search = req_data['queryResult']['parameters'][entity2]
-            entity2_in = search
-            outputParams[category] = search
-        entity2Entered = True
-        
-    #Error if neither are found
-    if (entity1Entered == False) and (entity2Entered == False):
-        search = 'Error'
-        category = 'Error'
-
-    #Handle search for location or meal, location first if both parameters are in request
-    text = similarSearch(search, category)
-    
-    #Setting up response data
     responsedata = {}
+    entityInputs = []
+    entitySearchResponses = []
+    validParams = True
+    readyToOutput = False
     
-    #Text is valid    
-    if text == 'Found':
-        validParams = True
-        
-        if entity1Entered:
-            outputParams[entity1 + 'OutputContext'] = search
-        elif entity2Entered:
-            outputParams[entity2 + 'OutputContext'] = search
-    
-        additionalOutputParams = req_data['queryResult']['outputContexts'][0]['parameters']
-        if entity1OutputContext in additionalOutputParams and inputParams[entity1] == '':
-            inputParams[entity1] = additionalOutputParams[entity1OutputContext]
-        if entity2OutputContext in additionalOutputParams and inputParams[entity2] == '':
-            inputParams[entity2] = additionalOutputParams[entity2OutputContext]
-       
-        #If both location and meal parameters included in request, now handle meal
-        if entity1Entered and entity2Entered:
-            category = entity2
-            search = inputParams[entity2]
-            entity2_in = search
-            text = similarSearch(search, category)
+    for entity in entities:
 
-            if text == 'Found':
-                outputParams[category] = search
-                outputParams[category + 'OutputContext'] = search
-            else:
+        #If parameter is filled, check if valid
+        if inputParams[entity.name]:
+            search = inputParams[entity.name]
+            text = similarSearch(search, entity.name)
+
+            #Parameter invalid
+            if text != 'Found':
                 validParams = False
-
-        #If location/meal/both search is fully valid, send response triggering Dialogflow event
-        if validParams:
-
-            if len(outputParams) <= 2:
-                if entity1 in outputParams and (inputParams[entity2] == ''):
-                    outputParams['Data'] = entity2Question
+                if not readyToOutput:
+                    outputParams['Data'] = text
                     responsedata = addFollowupEventInput(responsedata, outputParams)
-
-                elif entity2 in outputParams and (inputParams[entity1] == ''):
-                    outputParams['Data'] = entity1Question
-                    responsedata = addFollowupEventInput(responsedata, outputParams)
-                    
-                else:
-                    
-                    if entity1 not in outputParams:
-                        entity1_in  = inputParams[entity1]
-                    if entity2 not in outputParams:
-                        entity2_in = inputParams[entity2]
-
-                    date_in = datetime.date.today()
-                    outputParams['Data'] = [date_in, entity1_in, entity2_in]
-                    responsedata = addFollowupEventInput(responsedata, outputParams)
-            
+                    readyToOutput = True
+            #Parameter valid
             else:
-                date_in = datetime.date.today()
-                outputParams['Data'] = [date_in, entity1_in, entity2_in]
-                responsedata = addFollowupEventInput(responsedata, outputParams)
-                
-                
-        #Else, send suggestion to user for the parameter that was invalid
-        #If both parameters invalid, prioritize location
+                entityInputs.append(search)
+                entitySearchResponses.append(text)
+                outputParams[entity.name + 'OutputContext'] = search
+
+        #If paramater is unfilled, check if complementary output context parameter exists and is valid
+        elif entity.output_context in additionalOutputParams:
+            search = additionalOutputParams[entity.output_context]
+            text = similarSearch(search, entity.name)
+
+            #Parameter invalid
+            if text != 'Found':
+                validParams = False
+                if not readyToOutput:
+                    outputParams['Data'] = text
+                    responsedata = addFollowupEventInput(responsedata, outputParams)
+
+            #Parameter valid
+            else:
+                entityInputs.append(search)
+                entitySearchResponses.append(text)
+                outputParams[entity.name + 'OutputContext'] = search
+            
+        #If parameter is unfilled, request to be filled
         else:
-            outputParams['Data'] = text
-            responsedata = addFollowupEventInput(responsedata, outputParams)
-    else:
-        outputParams['Data'] = text
+            validParams = False
+            if not readyToOutput:
+                outputParams['Data'] = entity.question
+                responsedata = addFollowupEventInput(responsedata, outputParams)
+                readyToOutput = True
+
+    #If parameters filled and valid, return data
+    if validParams:
+        outputParams['Data'] = [entityInputs[0], entityInputs[1]]
         responsedata = addFollowupEventInput(responsedata, outputParams)
 
     return responsedata
+
 
 
 def findLocationAndMeal(req_data):
@@ -222,12 +184,43 @@ def findLocationAndMeal(req_data):
     :param req_data: Dialogflow POST request data
     :type req_data: JSON
     """
+
+    #Check if date entered: if not, assume today
+    inputParams = req_data['queryResult']['parameters']
+    if inputParams['Date']:
+        date_in = (inputParams['Date'])[:10]
+        dateEntered = True
+    else:
+        date_in = datetime.date.today()
+        dateEntered = False
+
+    startText = ''
+    temporaryResponse = ''
+    
     responsedata = requiredEntitiesHandler(req_data, 'findLocationAndMeal')
-    if 'followupEventInput' in responsedata:
-        data = responsedata['followupEventInput']['parameters']['Data']
-        if type(data) is list:
-            responsedata['followupEventInput']['parameters']['Data'] = requestLocationAndMeal(data[0],data[1],data[2])
+
+    data = responsedata['followupEventInput']['parameters']['Data']
+    if type(data) is list:
+        temporaryResponse = requestLocationAndMeal(date_in,data[0],data[1])
+        
+        if dateEntered and req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']:
+            Date_original = req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']
+
+            temporaryResponse = temporaryResponse[:-1]
+            if Date_original.lower() == 'yesterday' or Date_original.lower() == 'tomorrow' or Date_original.lower() == 'today':
+                startText += (Date_original[0].upper() + Date_original[1:])
+                
+            else:
+                startText += ('On ' + Date_original)
             
+        if startText:
+            startText += ' there is '
+        else:
+            startText += 'There is '
+            
+        startText += (temporaryResponse + '.')
+        responsedata['followupEventInput']['parameters']['Data'] = startText
+    
     return responsedata
 
 #findItem intent handling
@@ -243,22 +236,35 @@ def findItem(req_data):
     date_in = datetime.date.today()
     loc_in = req_data['queryResult']['parameters']['Location']
     item_in = req_data['queryResult']['parameters']['Item']
-    if 'Meal' in req_data['queryResult']['parameters']:
-        meal_in = req_data['queryResult']['parameters']['Meal']
-    else:
-        meal_in = ''
+    meal_in = req_data['queryResult']['parameters']['Meal']
     
+    if req_data['queryResult']['parameters']['Date']:
+        date_in = (req_data['queryResult']['parameters']['Date'])[:10]
+        dateEntered = True
+    else:
+        date_in = datetime.date.today()
+        dateEntered = False
 
     text = similarSearch(loc_in, 'Location')
     if text == 'Found':
         outputParams['Data'] = requestItem(date_in, loc_in,
                                            req_data['queryResult']['parameters']['Item'], meal_in)['fulfillmentText']
+        if dateEntered and req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']:
+            Date_original = req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']
+
+            outputParams['Data'] = (outputParams['Data'])[:-1]
+            if Date_original.lower() == 'yesterday' or Date_original.lower() == 'tomorrow' or Date_original.lower() == 'today':
+                outputParams['Data'] += (' ' + Date_original + '.')
+            else:
+                outputParams['Data'] += (' on ' + Date_original + '.')
+
                 
         outputParams['LocationOutputContext'] = loc_in
         responsedata = addFollowupEventInput(responsedata, outputParams)
                         
     else:
-        outputParams['Data'] = text  
+
+        outputParams['Data'] = text
         responsedata = addFollowupEventInput(responsedata, outputParams)
             
     responsedata = addFollowupEventInput(responsedata, outputParams)

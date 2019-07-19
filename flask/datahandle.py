@@ -5,6 +5,32 @@ import urllib.request
 
 ###Helper functions
 
+
+def formatItem(item):
+    """Removes excess ending spaces/commas.
+
+    :param item: The string to be manipulated
+    :type item: string
+    """
+    while(item[-1] == ' ' or item[-1] == ','):
+      item = item[:-1]
+    return item
+
+def formatPlural(text):
+    """Adds 'and' before last item in list of items.
+
+    :param text: The string to be manipulated
+    :type text: string
+    """
+    if ',' in text:
+        for i in range(len(text)):
+            if i == 0:
+                continue
+            if text[(len(text) - i)] == ',':
+                text = text[:(len(text) - i) + 2] + 'and ' + text[(len(text) - i) + 2:]
+                break
+    return text
+
 def removeSpaces(url_block):
     """Removes spaces in url string to create valid url string.
 
@@ -52,32 +78,43 @@ def checkCourseAvailable(data, course):
     return False
 
 #Gets food items of specified valid course
-def getItemsInCourse(coursedata, course):
+def getItemsInCourse(coursedata, course, formatted):
     """Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.
 
     :param coursedata: Chosen course subsection of MDining API HTTP response data
     :type coursedata: JSON
     :param course: Name of course
     :type course: string
+    :param formatted: True/False - formats response string if true
+    :type formatted: boolean
     """
     returndata = ""
 
+    if formatted:
+        prefix = '\t'
+        suffix = '\n'
+    else:
+        prefix = ''
+        suffix = ', '        
     for i in range(len(coursedata)):
         datatype = type(coursedata[i]['menuitem'])
         
         if coursedata[i]['name'].upper() == course.upper():
             if datatype is list:
                 for j in range(len(coursedata[i]['menuitem'])):
-                    returndata += ('\t' + coursedata[i]['menuitem'][j]['name'] + '\n')
+                    returndata += (prefix + formatItem(coursedata[i]['menuitem'][j]['name']) + suffix)
             elif datatype is dict:
-                returndata += ('\t' + coursedata[i]['menuitem']['name'] + '\n')
+                if 'No Service at this Time' not in coursedata[i]['menuitem']['name']:
+                    returndata += (prefix + formatItem(coursedata[i]['menuitem']['name']) + suffix)
     return returndata
 
-def getCoursesAndItems(data):
+def getCoursesAndItems(data, formatted):
     """Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.
 
     :param data: MDining API HTTP response data
     :type data: JSON
+    :param formatted: True/False - formats response string if true
+    :type formatted: boolean
     """
     returndata = ""
     for i in range(len(data['menu']['meal']['course'])):
@@ -86,7 +123,23 @@ def getCoursesAndItems(data):
                 if(checkCourseAvailable(data,value)):
                     returndata += ('Items in ' + value + ' course:\n')
 
-                    returndata += getItemsInCourse(data['menu']['meal']['course'], value)
+                    returndata += getItemsInCourse(data['menu']['meal']['course'], value, formatted)
+    return returndata
+
+def getItems(data, formatted):
+    """Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.
+
+    :param data: MDining API HTTP response data
+    :type data: JSON
+    :param formatted: True/False - formats response string if true
+    :type formatted: boolean
+    """
+    returndata = ""
+    for i in range(len(data['menu']['meal']['course'])):
+        for key, value in data['menu']['meal']['course'][i].items():
+            if key == 'name':
+                if(checkCourseAvailable(data,value)):
+                    returndata += getItemsInCourse(data['menu']['meal']['course'], value, formatted)
     return returndata
 
 def findItemFormatting(possiblematches):
@@ -177,8 +230,7 @@ def requestLocationAndMeal(date_in, loc_in, meal_in):
     
     #checking if specified meal available
     if checkMealAvailable(data, meal_in):
-        #print(getCoursesAndItems(data))
-        return getCoursesAndItems(data)
+        return formatPlural(formatItem(getItems(data, False)))
     else:
         return "No meal is available."
 
