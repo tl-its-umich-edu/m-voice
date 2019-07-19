@@ -177,23 +177,23 @@ def requestLocationAndMeal(date_in, loc_in, meal_in):
     
     #checking if specified meal available
     if checkMealAvailable(data, meal_in):
-        print(getCoursesAndItems(data))
+        #print(getCoursesAndItems(data))
         return getCoursesAndItems(data)
     else:
         return "No meal is available."
 
 #Handle meal item data request
-def requestItem(date_in, loc_in, meal_in, item_in):
+def requestItem(date_in, loc_in, item_in, meal_in):
     """Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from ``findItem`` intent.
 
     :param date_in: Input date
     :type date_in: string
     :param loc_in: Input location
     :type loc_in: string
-    :param meal_in: Input meal
-    :type meal_in: string
     :param item_in: Input food item
     :type item_in: string
+    :param meal_in: Input meal, can be empty string if not specified
+    :type meal_in: string
     """
     url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
     location = '&location='
