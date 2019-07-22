@@ -5,17 +5,6 @@ import urllib.request
 
 ###Helper functions
 
-
-def formatItem(item):
-    """Removes excess ending spaces/commas.
-
-    :param item: The string to be manipulated
-    :type item: string
-    """
-    while(item[-1] == ' ' or item[-1] == ','):
-      item = item[:-1]
-    return item
-
 def formatPlural(text):
     """Adds 'and' before last item in list of items.
 
@@ -23,12 +12,8 @@ def formatPlural(text):
     :type text: string
     """
     if ',' in text:
-        for i in range(len(text)):
-            if i == 0:
-                continue
-            if text[(len(text) - i)] == ',':
-                text = text[:(len(text) - i) + 2] + 'and ' + text[(len(text) - i) + 2:]
-                break
+      index = text.rfind(',')  + 2
+      text = text[:index] + 'and ' + text[index:]
     return text
 
 def removeSpaces(url_block):
@@ -102,10 +87,10 @@ def getItemsInCourse(coursedata, course, formatted):
         if coursedata[i]['name'].upper() == course.upper():
             if datatype is list:
                 for j in range(len(coursedata[i]['menuitem'])):
-                    returndata += (prefix + formatItem(coursedata[i]['menuitem'][j]['name']) + suffix)
+                    returndata += (prefix + (coursedata[i]['menuitem'][j]['name']).rstrip(', ') + suffix)
             elif datatype is dict:
                 if 'No Service at this Time' not in coursedata[i]['menuitem']['name']:
-                    returndata += (prefix + formatItem(coursedata[i]['menuitem']['name']) + suffix)
+                    returndata += (prefix + (coursedata[i]['menuitem']['name']).rstrip(', ') + suffix)
     return returndata
 
 def getCoursesAndItems(data, formatted):
@@ -230,7 +215,8 @@ def requestLocationAndMeal(date_in, loc_in, meal_in):
     
     #checking if specified meal available
     if checkMealAvailable(data, meal_in):
-        return formatPlural(formatItem(getItems(data, False)))
+        returnstring = (getItems(data, False)).rstrip(', ')
+        return formatPlural(returnstring)
     else:
         return "No meal is available."
 
