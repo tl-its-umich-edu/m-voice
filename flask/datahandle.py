@@ -333,9 +333,9 @@ def request_item(date_in, loc_in, item_in, meal_in, requisites):
                     #Append matches to specified item to possible_matches list
                     possible_matches = find_matches(course_data, possible_matches,
                                                     item_in, meal_name, requisites)
-
+    
     #Specified item found
-    if not possible_matches:
+    if possible_matches:
         possible_matches = find_item_formatting(possible_matches)
         text = 'Yes, there is '
         for i in range(len(possible_matches)):

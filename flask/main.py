@@ -184,7 +184,7 @@ def required_entities_handler(req_data, intentname):
 
     if intentname == 'find_location_and_meal':
         entities = [Entity('Location', 'LocationOutputContext', 'Which dining location?'),
-                    Entity('Meal', 'MealOutputContext', 'What meal would you like?')]
+                    Entity('Meal', 'MealOutputContext', 'Which meal of the day would you like?')]
 
     #Setting up variables
     input_params = req_data['queryResult']['parameters']
@@ -321,7 +321,9 @@ def find_location_and_meal(req_data):
             else:
                 start_text += 'There is '
 
-        responsedata['followupEventInput']['parameters']['Data'] = start_text + temporary_response + '.'
+        responsedata['followupEventInput']['parameters']['Data'] = (start_text +
+                                                                    temporary_response +
+                                                                    '.').replace('  ', ' ')
 
     #Else (invalid user request),
     #response text in Data parameter contains error handling output from required_entities_handler
@@ -369,8 +371,11 @@ def find_item(req_data):
         #Setup 'Data' output context parameter with appropriate gathered data to send to queryHelper intent
         temporary_response = request_item(date_in, loc_in, input_params['Item'], meal_in, requisites)['fulfillmentText']
         temporary_response = format_requisites(temporary_response, requisites)
+
         if '[meal]' in temporary_response:
-            temporary_response = temporary_response.replace('[meal]', item_in)
+            temporary_response = temporary_response.replace('[meal]', item_in.lower())
+            if item_in[-1] == 's' and ' is ' in temporary_response:
+                temporary_response = temporary_response.replace(' is ', ' are ')
         output_params['Data'] = temporary_response
 
         #Include date in response if specified
@@ -389,12 +394,13 @@ def find_item(req_data):
         else:
             output_params['Data'] += '.'
 
+        output_params['Data'] = output_params['Data'].replace('  ', ' ')
         output_params['LocationOutputContext'] = loc_in
         responsedata = add_followup_event_input(responsedata, output_params)
 
     #If Location invalid, output appropiate response
     else:
-        output_params['Data'] = text
+        output_params['Data'] = text.replace('  ', ' ')
         responsedata = add_followup_event_input(responsedata, output_params)
 
 
@@ -428,11 +434,12 @@ def webhook_post():
                     responsedata = i['parameters']['Data']
                     break
         responsedata = {'fulfillmentText': responsedata}
-    elif 'find_location_and_meal' in intentname:
+    elif 'findLocationAndMeal' in intentname:
         responsedata = find_location_and_meal(req_data)
-    elif 'find_item' in intentname:
+    elif 'findItem' in intentname:
         responsedata = find_item(req_data)
-
+    else:
+        responsedata = {'fulfillmentText': 'Not available.'}
 
     return jsonify(responsedata)
 
