@@ -6,7 +6,7 @@ import numpy as np
 from google.cloud import datastore
 import datetime
 from remove_ignore_entities import removeIgnoreEntities
-from datahandle import requestLocationAndMeal, requestItem
+from datahandle import requestLocationAndMeal, requestItem, formatPlural, formatRequisites
 
 app = Flask(__name__)
 
@@ -78,8 +78,6 @@ def similarSearch(search, category):
     
     return outputstring[:-4] + '?'
 
-
-
 def addFollowupEventInput(responsedata, outputParams):
     """Helper function for adding followupEventInput trigger to send data to queryHelper intent.
 
@@ -88,17 +86,61 @@ def addFollowupEventInput(responsedata, outputParams):
     :param outputParams: Output context paramaters to send to queryHelper
     :type outputParams: dict
     """
-    responsedata['followupEventInput'] = {
-        'name': 'queryHelperEvent',
-        'parameters': outputParams
-    }
+    if outputParams == {}:
+        return responsedata
+    
+    if 'followupEventInput' in responsedata:
+        responsedata['followupEventInput']['parameters'].update(outputParams)
+    else:
+        responsedata['followupEventInput'] = {
+            'name': 'queryHelperEvent',
+            'parameters': outputParams
+        }
     return responsedata
 
+def requisitesSetup(requisites, inputParams, outputParams, additionalOutputParams):
+    """If any requisities specified in context parameters, extracts them and adds them to ``outputParams`` to remember for next query. 
+
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
+    :param inputParams: Input context paramaters containing user specifications
+    :type inputParams: dict
+    :param outputParams: Output context paramaters to send to queryHelper
+    :type outputParams: dict
+    :param additionalOutputParams: Additional remembered context paramaters containing user specifications from previous query if needed
+    :type additionalOutputParams: dict
+    """
+    #Adds trait to requisites if specified
+    if inputParams['itemTrait'] == [] and 'itemTraitOutputContext' in additionalOutputParams:
+        requisites['trait'] = additionalOutputParams['itemTraitOutputContext']
+    else:
+        requisites['trait'] = inputParams['itemTrait']
+        
+    #Adds allergens to requisites if specified
+    if inputParams['itemAllergens'] == [] and 'itemAllergensOutputContext' in additionalOutputParams:
+        requisites['allergens'] = additionalOutputParams['itemAllergensOutputContext']
+    else:
+        requisites['allergens'] = inputParams['itemAllergens']
+
+    if 'nuts' in requisites['allergens']:
+        requisites['allergens'].remove('nuts')
+        requisites['allergens'].append('tree-nuts')
+        requisites['allergens'].append('peanuts')
+
+    #Adds requisites to outputParams if specified    
+    if requisites['trait']:
+        outputParams['itemTraitOutputContext'] = requisites['trait']
+    if requisites['allergens']:
+        outputParams['itemAllergensOutputContext'] = requisites['allergens']
+
+    return requisites, inputParams, outputParams, additionalOutputParams
+
 def requiredEntitiesHandler(req_data, intentname):
-    """Handles response for intents with 2 entities that are both required and need to be handled manually, returns approriate parameters for specific intent handler to take care of.
+    """Handles response for intents with 2 or more entities that are required and need to be handled manually, returns approriate parameters for specific intent handler to take care of.
+       Will return list of entities in Data paramater of responsedata if all input parameters were valid, or a string response in the Data parameter containing response of issue to user.
 
     :param req_data: The HTTP response data
-    :type req_data: JSON
+    :type req_data: dict
     :param intentname: Output context paramaters to send to queryHelper
     :type intentname: string
     """
@@ -107,9 +149,10 @@ def requiredEntitiesHandler(req_data, intentname):
             self.name = name
             self.output_context = output_context
             self.question = question
-        
-    entities = [Entity('Location','LocationOutputContext','Which dining location?'),
-                Entity('Meal','MealOutputContext','What meal would you like?')]
+            
+    if intentname == 'findLocationAndMeal':
+        entities = [Entity('Location','LocationOutputContext','Which dining location?'),
+                    Entity('Meal','MealOutputContext','What meal would you like?')]
 
     #Setting up variables
     inputParams = req_data['queryResult']['parameters']
@@ -171,22 +214,26 @@ def requiredEntitiesHandler(req_data, intentname):
 
     #If parameters filled and valid, return data
     if validParams:
-        outputParams['Data'] = [entityInputs[0], entityInputs[1]]
+        outputParams['Data'] = []
+        for entity in entityInputs:
+            outputParams['Data'].append(entity)
         responsedata = addFollowupEventInput(responsedata, outputParams)
 
     return responsedata
-
-
-
+    
 def findLocationAndMeal(req_data):
     """Dialogflow ``findLocationAndMeal`` intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.
 
     :param req_data: Dialogflow POST request data
-    :type req_data: JSON
+    :type req_data: dict
     """
 
-    #Check if date entered: if not, assume today
     inputParams = req_data['queryResult']['parameters']
+    additionalOutputParams = req_data['queryResult']['outputContexts'][0]['parameters']
+    outputParams = {}
+    requisites = {'trait': [], 'allergens': []}
+
+    #Check if date entered: if not, assume today    
     if inputParams['Date']:
         date_in = (inputParams['Date'])[:10]
         dateEntered = True
@@ -194,39 +241,52 @@ def findLocationAndMeal(req_data):
         date_in = datetime.date.today()
         dateEntered = False
 
+    #Set up requisites
+    requisites, inputParams, outputParams, additionalOutputParams = requisitesSetup(requisites, inputParams, outputParams, additionalOutputParams)
+    
     startText = ''
     temporaryResponse = ''
     
     responsedata = requiredEntitiesHandler(req_data, 'findLocationAndMeal')
-
+    responsedata = addFollowupEventInput(responsedata, outputParams)
+    
     data = responsedata['followupEventInput']['parameters']['Data']
-    if type(data) is list:
-        temporaryResponse = requestLocationAndMeal(date_in,data[0],data[1])
-        
-        if dateEntered and req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']:
-            Date_original = req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']
 
-            temporaryResponse = temporaryResponse[:-1]
-            if Date_original.lower() == 'yesterday' or Date_original.lower() == 'tomorrow' or Date_original.lower() == 'today':
+    #If data parameter has list of entities (valid user request), retrieve data and formulate response
+    if type(data) is list:
+        temporaryResponse = requestLocationAndMeal(date_in,data[0],data[1], requisites)
+        if temporaryResponse == '':
+            temporaryResponse = 'No meal is available'
+
+        temporaryResponse = formatRequisites(temporaryResponse, requisites)
+
+        #If date specified, adds it to end of response text to data for more holistic response
+        if dateEntered and additionalOutputParams['Date.original']:
+            Date_original = additionalOutputParams['Date.original']
+
+            informalDateTypesCheck = ['next' in Date_original.lower(), 'this' in Date_original.lower(),
+                         Date_original.lower() == 'yesterday', Date_original.lower() == 'tomorrow',
+                         Date_original.lower() == 'today']
+            if any(informalDateTypesCheck):
                 startText += (Date_original[0].upper() + Date_original[1:])
                 
             else:
                 startText += ('On ' + Date_original)
 
-        if 'No meal is available' not in temporaryResponse:
+        #Linguistic semantics if no meal returned
+        if 'No meal is available' in temporaryResponse:
+            if startText:
+                startText += ' '
+                temporaryResponse=  temporaryResponse[0].lower() + temporaryResponse[1:]
+        else:
             if startText:
                 startText += ' there is '
             else:
                 startText += 'There is '
-        else:
-            if startText:
-                startText += ' '
-                temporaryResponse= temporaryResponse[0].lower() + temporaryResponse[1:]
-            else:
-                temporaryResponse= temporaryResponse[:-1]
-            
-        startText += (temporaryResponse + '.')
-        responsedata['followupEventInput']['parameters']['Data'] = startText
+
+        responsedata['followupEventInput']['parameters']['Data'] = startText + temporaryResponse + '.'
+
+    #Else (invalid user request), response text in Data parameter contains error handling taken care of by requiredEntitiesHandler
     
     return responsedata
 
@@ -235,47 +295,62 @@ def findItem(req_data):
     """Dialogflow ``findItem`` intent handler. Checks for valid Location and Item and sends HTTP response with appropriate data.
 
     :param req_data: Dialogflow POST request data
-    :type req_data: JSON
+    :type req_data: dict
     """
-    responsedata = {}
-    outputParams = {}
-
-    date_in = datetime.date.today()
-    loc_in = req_data['queryResult']['parameters']['Location']
-    item_in = req_data['queryResult']['parameters']['Item']
-    meal_in = req_data['queryResult']['parameters']['Meal']
     
-    if req_data['queryResult']['parameters']['Date']:
-        date_in = (req_data['queryResult']['parameters']['Date'])[:10]
+    inputParams = req_data['queryResult']['parameters']
+    additionalOutputParams = req_data['queryResult']['outputContexts'][0]['parameters']
+    outputParams = {}
+    requisites = {'trait': [], 'allergens': []}
+    responsedata = {}
+    
+    loc_in = inputParams['Location']
+    item_in = inputParams['Item']
+    meal_in = inputParams['Meal']
+
+    #Set up requisites
+    requisites, inputParams, outputParams, additionalOutputParams = requisitesSetup(requisites, inputParams, outputParams, additionalOutputParams)
+
+
+    #Check if date entered: if not, assume today
+    if inputParams['Date']:
+        date_in = (inputParams['Date'])[:10]
         dateEntered = True
     else:
         date_in = datetime.date.today()
         dateEntered = False
 
+    #Check if Location valid
     text = similarSearch(loc_in, 'Location')
     if text == 'Found':
-        outputParams['Data'] = requestItem(date_in, loc_in,
-                                           req_data['queryResult']['parameters']['Item'], meal_in)['fulfillmentText']
-        if dateEntered and req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']:
-            Date_original = req_data['queryResult']['outputContexts'][0]['parameters']['Date.original']
 
-            outputParams['Data'] = (outputParams['Data'])[:-1]
+        #Setup 'Data' output context parameter with appropriate gathered data to send to queryHelper intent
+        temporaryResponse = requestItem(date_in, loc_in, inputParams['Item'], meal_in, requisites)['fulfillmentText']
+        temporaryResponse = formatRequisites(temporaryResponse, requisites)
+        if '[meal]' in temporaryResponse:
+            temporaryResponse = temporaryResponse.replace('[meal]', item_in)
+        outputParams['Data'] = temporaryResponse
+
+        #Include date in response if specified
+        if dateEntered and additionalOutputParams['Date.original']:
+            Date_original = additionalOutputParams['Date.original']
+
             if Date_original.lower() == 'yesterday' or Date_original.lower() == 'tomorrow' or Date_original.lower() == 'today':
                 outputParams['Data'] += (' ' + Date_original + '.')
             else:
                 outputParams['Data'] += (' on ' + Date_original + '.')
 
-                
+        else:
+            outputParams['Data'] += '.'
+        
         outputParams['LocationOutputContext'] = loc_in
         responsedata = addFollowupEventInput(responsedata, outputParams)
-                        
-    else:
 
+    #If Location invalid, output appropiate response
+    else:
         outputParams['Data'] = text
         responsedata = addFollowupEventInput(responsedata, outputParams)
-            
-    responsedata = addFollowupEventInput(responsedata, outputParams)
-    
+                
 
     return responsedata
 #########################################################################

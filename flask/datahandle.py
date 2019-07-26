@@ -5,6 +5,52 @@ import urllib.request
 
 ###Helper functions
 
+def formatRequisites(text, requisites):
+    """If any item requisites specified, adds them to response text data for more holistic response.
+
+    :param text: The response text data to be formatted
+    :type texta: string
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
+    """
+    traitsText = ''
+    allergensText = ''
+
+    req_map = {'trait': {'mhealthy': 'healthy'},
+               'allergens': {'sesame-seed': 'sesame seeds',
+                             'tree-nuts': 'tree nuts',
+                             'wheat_barley_rye': 'wheat or barley or rye'}}
+
+    #If traits specified, extract into a string
+    for i, trait in enumerate(requisites['trait']):
+        if traitsText:
+            traitsText += ', '
+        traitsText += req_map['trait'].get(trait, trait)
+    traitsText = formatPlural(traitsText.rstrip(', '))
+    
+    #If allergens specified, extract into a string
+    for i, allergen in enumerate(requisites['allergens']):
+        if allergensText:
+            allergensText += ', '
+        allergensText += req_map['allergens'].get(allergen, allergen)
+    allergensText = formatPlural(allergensText.rstrip(', '))
+    allergensText = allergensText.replace('and','or')
+
+    #Requisite-specific language
+    if allergensText:
+        allergensText = ' without ' + allergensText
+    if traitsText:
+        traitsText = ' that is ' + traitsText
+        
+    #Return combined string
+    if (allergensText or traitsText) and 'Sorry, that is not available' in text:
+        traitsText = traitsText.replace(' that is ', '')
+        text = text.replace('Sorry, ', 'Sorry, ' + traitsText + ' ')
+        text = text.replace('that is not available', '[meal]')
+        return text + allergensText + ' is not available'
+    else:
+        return text + traitsText + allergensText
+
 def formatPlural(text):
     """Adds 'and' before last item in list of items.
 
@@ -34,24 +80,21 @@ def checkMealAvailable(data, meal):
     """Searches response data to check if meal is available at specified location/date.
 
     :param data: MDining API HTTP response data
-    :type data: JSON
+    :type data: dict
     :param meal: Name of meal
     :type meal: string
     """
     for key in data['menu']['meal']:
         if data['menu']['meal']['name'].upper() == meal.upper():
             if 'course' in data['menu']['meal']:
-                #print('Found')
                 return True
-            #print('Not found')
-            #print(data['menu']['meal']['message']['content'])
             return False
 
 def checkCourseAvailable(data, course):
     """Searches response data to check if course is available in specified meal.
 
     :param data: MDining API HTTP response data
-    :type data: JSON
+    :type data: dict
     :param course: Name of course
     :type course: string
     """
@@ -62,122 +105,132 @@ def checkCourseAvailable(data, course):
                     return True
     return False
 
-#Gets food items of specified valid course
-def getItemsInCourse(coursedata, course, formatted):
-    """Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.
 
-    :param coursedata: Chosen course subsection of MDining API HTTP response data
-    :type coursedata: JSON
-    :param course: Name of course
-    :type course: string
+
+def checkItemSpecifications(item, traits, allergens):
+    """Returns true if food item is satisfactory with specified traits and allergens.
+
+    :param item: Data of specific food item
+    :type item: dict
+    :param traits: List of specified traits item must have, can be empty
+    :type traits: list
+    :param allergens: List of allergens item cannot have, can be empty
+    :type allergens: list
+    """
+    #Return false if allergens list isn't empty and any allergens found
+    if allergens and 'allergens' in item:
+        for allergen in allergens:
+            if allergen in item['allergens']:
+                return False
+
+    #Return true if traits list empty
+    if not traits:
+        return True
+
+    #Return false if traits list isn't empty and any traits are missing
+    if 'trait' in item:
+        for trait in traits:
+            if trait not in item['trait']:
+                return False
+
+        #All traits found, return true
+        return True
+    else:
+        return False
+
+def getItems(data, requisites, formatted):
+    """Returns string of food items of each course in response data for fulfillmentText in response to Dialogflow.
+
+    :param data: MDining API HTTP response data
+    :type data: dict
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
     :param formatted: True/False - formats response string if true
     :type formatted: boolean
     """
     returndata = ""
-
+    traits = requisites['trait']
+    allergens = requisites['allergens']
+        
     if formatted:
         prefix = '\t'
         suffix = '\n'
     else:
         prefix = ''
-        suffix = ', '        
-    for i in range(len(coursedata)):
-        datatype = type(coursedata[i]['menuitem'])
+        suffix = ', '
+
+    for course in data['menu']['meal']['course']:
+        itemData = []
+        datatype = type(course['menuitem'])
         
-        if coursedata[i]['name'].upper() == course.upper():
-            if datatype is list:
-                for j in range(len(coursedata[i]['menuitem'])):
-                    returndata += (prefix + (coursedata[i]['menuitem'][j]['name']).rstrip(', ') + suffix)
-            elif datatype is dict:
-                if 'No Service at this Time' not in coursedata[i]['menuitem']['name']:
-                    returndata += (prefix + (coursedata[i]['menuitem']['name']).rstrip(', ') + suffix)
+        if datatype is list:
+            itemData += course['menuitem']
+        else:
+            itemData.append(course['menuitem'])
+
+        for item in itemData:
+            if checkItemSpecifications(item, traits, allergens) and 'No Service at this Time' not in item['name']:
+                returndata += (prefix + (item['name']).rstrip(', ') + suffix)
+        
     return returndata
 
-def getCoursesAndItems(data, formatted):
-    """Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.
-
-    :param data: MDining API HTTP response data
-    :type data: JSON
-    :param formatted: True/False - formats response string if true
-    :type formatted: boolean
-    """
-    returndata = ""
-    for i in range(len(data['menu']['meal']['course'])):
-        for key, value in data['menu']['meal']['course'][i].items():
-            if key == 'name':
-                if(checkCourseAvailable(data,value)):
-                    returndata += ('Items in ' + value + ' course:\n')
-
-                    returndata += getItemsInCourse(data['menu']['meal']['course'], value, formatted)
-    return returndata
-
-def getItems(data, formatted):
-    """Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.
-
-    :param data: MDining API HTTP response data
-    :type data: JSON
-    :param formatted: True/False - formats response string if true
-    :type formatted: boolean
-    """
-    returndata = ""
-    for i in range(len(data['menu']['meal']['course'])):
-        for key, value in data['menu']['meal']['course'][i].items():
-            if key == 'name':
-                if(checkCourseAvailable(data,value)):
-                    returndata += getItemsInCourse(data['menu']['meal']['course'], value, formatted)
-    return returndata
-
-def findItemFormatting(possiblematches):
+def findItemFormatting(possibleMatches):
     """Formatting list of possible matches into more natural sentence structure by removing redundancy:
     [Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -> [Chicken, chicken wings during lunch, and chicken patty during dinner]
     
-    :param possiblematches: List of food items in data that matched user input
-    :type possiblematches: list
+    :param possibleMatches: List of food items in data that matched user input
+    :type possibleMatches: list
     """
-    for i in range(len(possiblematches)):
+    for i in range(len(possibleMatches)):
         if i == 0:
             continue
-        words = possiblematches[i].split()
+        words = possibleMatches[i].split()
         
         #If previous term has same ending ("Dinner") as current term, remove it
-        if(possiblematches[i].split()[-1] == possiblematches[i - 1].split()[-1]):
+        if(possibleMatches[i].split()[-1] == possibleMatches[i - 1].split()[-1]):
             #8 = amount of characters taken up by [' during ']
-            length = len(possiblematches[i].split()[-1]) + 8
-            possiblematches[i - 1] = possiblematches[i - 1][:length*-1]
+            length = len(possibleMatches[i].split()[-1]) + 8
+            possibleMatches[i - 1] = possibleMatches[i - 1][:length*-1]
             
-    return possiblematches
+    return possibleMatches
 
 
-def findMatches(coursedata, possiblematches, item_in, mealname):
+def findMatches(courseData, possibleMatches, item_in, mealName, requisites):
     """Appends matches of specified food item in data of an individual course to list of possible matches.
 
-    :param coursedata: Chosen course subsection of MDining API HTTP response data
-    :type coursedata: JSON
-    :param possiblematches: List of food items in data that matched user input
-    :type possiblematches: list
+    :param courseData: Chosen course subsection of MDining API HTTP response data
+    :type courseData: dict
+    :param possibleMatches: List of food items in data that matched user input
+    :type possibleMatches: list
     :param item_in: User input food item
     :type item_in: string
-    :param mealname: Name of meal
-    :type mealname: string
+    :param mealName: Name of meal
+    :type mealName: string
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
     """
-    datatype = type(coursedata)
 
+    traits = requisites['trait']
+    allergens = requisites['allergens']
+
+    itemData = []
+    datatype = type(courseData)
+    
     if datatype is list:
-        for k in range(len(coursedata)):
-            if item_in.upper() in coursedata[k]['name'].upper():
-                if coursedata[k]['name'][-1] == ' ':
-                    coursedata[k]['name'] = coursedata[k]['name'][:-1]
-                    
-                possiblematches.append(coursedata[k]['name'] + ' during ' + mealname)
+        itemData += courseData
+    else:
+        itemData.append(courseData)
 
-    elif datatype is dict:
-        if item_in.upper() in coursedata['name'].upper():
-            if coursedata['name'][-1] == ' ':
-                coursedata['name'] = coursedata['name'][:-1]
+    for item in itemData:
+        if checkItemSpecifications(item, traits, allergens) == False:
+            continue
+        if item_in.upper() in item['name'].upper():
+            if item['name'][-1] == ' ':
+                item['name'] = item['name'][:-1]
                 
-            possiblematches.append(coursedata['name'] + ' during ' + mealname)    
+            possibleMatches.append(item['name'] + ' during ' + mealName)
 
-    return possiblematches
+    return possibleMatches
 
 
 
@@ -185,7 +238,7 @@ def findMatches(coursedata, possiblematches, item_in, mealname):
 ###Primary Handler Functions
 
 
-def requestLocationAndMeal(date_in, loc_in, meal_in):
+def requestLocationAndMeal(date_in, loc_in, meal_in, requisites):
     """Handles searching for appropriate data response for valid specified location and meal entities from ``findLocationAndMeal`` intent.
 
     :param date_in: Input date
@@ -194,9 +247,10 @@ def requestLocationAndMeal(date_in, loc_in, meal_in):
     :type loc_in: string
     :param meal_in: Input meal
     :type meal_in: string
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
     """
-    #date_in='2019-05-15'
-    
+
     #preset vars
     url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
     location = '&location='
@@ -215,13 +269,13 @@ def requestLocationAndMeal(date_in, loc_in, meal_in):
     
     #checking if specified meal available
     if checkMealAvailable(data, meal_in):
-        returnstring = (getItems(data, False)).rstrip(', ')
+        returnstring = (getItems(data, requisites, False)).rstrip(', ')
         return formatPlural(returnstring)
     else:
-        return "No meal is available."
+        return "No meal is available"
 
 #Handle meal item data request
-def requestItem(date_in, loc_in, item_in, meal_in):
+def requestItem(date_in, loc_in, item_in, meal_in, requisites):
     """Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from ``findItem`` intent.
 
     :param date_in: Input date
@@ -232,6 +286,8 @@ def requestItem(date_in, loc_in, item_in, meal_in):
     :type item_in: string
     :param meal_in: Input meal, can be empty string if not specified
     :type meal_in: string
+    :param requisites: Contains information food item must comply with (traits, allergens, etc)
+    :type requisites: dict
     """
     url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
     location = '&location='
@@ -252,7 +308,7 @@ def requestItem(date_in, loc_in, item_in, meal_in):
     #fetching json
     data = requests.get(url).json()
     
-    possiblematches = []
+    possibleMatches = []
     
     firstRound = True
     
@@ -270,26 +326,25 @@ def requestItem(date_in, loc_in, item_in, meal_in):
         for j in i['course']:
             for key, value in j.items():
                 if key == 'name':
-                    coursedata = j['menuitem']
-                    mealname = i['name']
-                    #Append matches to specified item to possiblematches list
-                    possiblematches = findMatches(coursedata, possiblematches, item_in, mealname)
+                    courseData = j['menuitem']
+                    mealName = i['name']
+                    #Append matches to specified item to possibleMatches list
+                    possibleMatches = findMatches(courseData, possibleMatches, item_in, mealName, requisites)
          
     #Specified item found
-    if len(possiblematches) > 0:
-        possiblematches = findItemFormatting(possiblematches)   
+    if len(possibleMatches) > 0:
+        possibleMatches = findItemFormatting(possibleMatches)   
         text = 'Yes, there is '
-        for i in range(len(possiblematches)):
-            if len(possiblematches) > 1 and (i == len(possiblematches) - 1):
+        for i in range(len(possibleMatches)):
+            if len(possibleMatches) > 1 and (i == len(possibleMatches) - 1):
                 text += ' and'
-            text += ' ' + possiblematches[i]
-            if i != len(possiblematches) - 1:
+            text += ' ' + possibleMatches[i]
+            if i != len(possibleMatches) - 1:
                 text += ','
-            else:
-                text += '.'
+
     #Specified item not found
     else:
-        text = 'Sorry, that is not available.'
+        text = 'Sorry, that is not available'
 
     
     return { 'fulfillmentText': text}
