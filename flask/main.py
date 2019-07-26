@@ -326,7 +326,10 @@ def findItem(req_data):
 
         #Setup 'Data' output context parameter with appropriate gathered data to send to queryHelper intent
         temporaryResponse = requestItem(date_in, loc_in, inputParams['Item'], meal_in, requisites)['fulfillmentText']
-        outputParams['Data'] = formatRequisites(temporaryResponse, requisites)
+        temporaryResponse = formatRequisites(temporaryResponse, requisites)
+        if '[meal]' in temporaryResponse:
+            temporaryResponse = temporaryResponse.replace('[meal]', item_in)
+        outputParams['Data'] = temporaryResponse
 
         #Include date in response if specified
         if dateEntered and additionalOutputParams['Date.original']:

@@ -47,8 +47,10 @@ def formatRequisites(text, requisites):
         
     #Return combined string
     if (allergensText or traitsText) and 'Sorry, that is not available' in text:
-        text = text.replace('that is not available', 'a meal')
-        return text + traitsText + allergensText + ' is not available'
+        traitsText = traitsText.replace(' that is ', '')
+        text = text.replace('Sorry, ', 'Sorry, ' + traitsText + ' ')
+        text = text.replace('that is not available', '[meal]')
+        return text + allergensText + ' is not available'
     else:
         return text + traitsText + allergensText
 
