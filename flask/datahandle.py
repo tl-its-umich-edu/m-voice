@@ -16,26 +16,23 @@ def formatRequisites(text, requisites):
     traitsText = ''
     allergensText = ''
 
+    req_map = {'trait': {'mhealthy': 'healthy'},
+               'allergens': {'sesame-seed': 'sesame seeds',
+                             'tree-nuts': 'tree nuts',
+                             'wheat_barley_rye': 'wheat or barley or rye'}}
+
     #If traits specified, extract into a string
-    for trait in requisites['trait']:
+    for i, trait in enumerate(requisites['trait']):
         if traitsText:
             traitsText += ', '
-        if trait == 'mhealthy':
-            trait = 'healthy'
-        traitsText += trait
+        traitsText += req_map['trait'].get(trait, trait)
     traitsText = formatPlural(traitsText.rstrip(', '))
-
+    
     #If allergens specified, extract into a string
-    for allergen in requisites['allergens']:
+    for i, allergen in enumerate(requisites['allergens']):
         if allergensText:
             allergensText += ', '
-        if allergen == 'sesame-seed':
-            allergen = 'sesame seeds'
-        elif allergen == 'tree-nuts':
-            allergen = 'tree nuts'
-        elif allergen == 'wheat_barley_rye':
-            allergen = 'wheat or barley or rye'
-        allergensText += allergen
+        allergensText += req_map['allergens'].get(allergen, allergen)
     allergensText = formatPlural(allergensText.rstrip(', '))
     allergensText = allergensText.replace('and','or')
 
