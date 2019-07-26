@@ -252,7 +252,7 @@ def findLocationAndMeal(req_data):
     
     data = responsedata['followupEventInput']['parameters']['Data']
 
-    #If 
+    #If data parameter has list of entities (valid user request), retrieve data and formulate response
     if type(data) is list:
         temporaryResponse = requestLocationAndMeal(date_in,data[0],data[1], requisites)
         if temporaryResponse == '':
@@ -285,6 +285,8 @@ def findLocationAndMeal(req_data):
                 startText += 'There is '
 
         responsedata['followupEventInput']['parameters']['Data'] = startText + temporaryResponse + '.'
+
+    #Else (invalid user request), response text in Data parameter contains error handling taken care of by requiredEntitiesHandler
     
     return responsedata
 
@@ -330,7 +332,6 @@ def findItem(req_data):
         if dateEntered and additionalOutputParams['Date.original']:
             Date_original = additionalOutputParams['Date.original']
 
-            #outputParams['Data'] = (outputParams['Data'])[:-1]
             if Date_original.lower() == 'yesterday' or Date_original.lower() == 'tomorrow' or Date_original.lower() == 'today':
                 outputParams['Data'] += (' ' + Date_original + '.')
             else:

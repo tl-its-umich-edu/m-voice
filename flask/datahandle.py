@@ -122,7 +122,6 @@ def checkItemSpecifications(item, traits, allergens):
     if allergens and 'allergens' in item:
         for allergen in allergens:
             if allergen in item['allergens']:
-                #print(allergen + ' in ' + item['name'])
                 return False
 
     #Return true if traits list empty
@@ -133,13 +132,11 @@ def checkItemSpecifications(item, traits, allergens):
     if 'trait' in item:
         for trait in traits:
             if trait not in item['trait']:
-                #print(trait + ' not in ' + item['name'])
                 return False
 
         #All traits found, return true
         return True
     else:
-        #print('No traits found')
         return False
 
 def getItems(data, requisites, formatted):
