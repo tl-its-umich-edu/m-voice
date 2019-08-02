@@ -4,23 +4,16 @@ import json, requests
 import numpy as np
 from flask import Flask, request, jsonify, abort
 from google.cloud import datastore
-from datahandle import request_location_and_meal, request_item, format_requisites
-from dashbot import google
+from datahandle import request_location_and_meal, request_item, format_requisites, get_secrets
+from dashbot import google as dashbotgoogle
 
-dba = google.google('RtTQxDapwsmnHrfRz0SfOQZPGOBTw8GDpcTDiRel')
 app = Flask(__name__)
-
-###Helper functions
 
 #Authentication
 def check_auth(name, passw):
-    client = datastore.Client()
-    query = client.query(kind='env_vars')
-    entity = query.fetch()
-    secrets = list(entity)[0]
+    secrets = get_secrets()
     passwcheck = secrets.get('pass')
     usercheck = secrets.get('user')
-    
     return name == usercheck and passw == passwcheck
 def requires_auth(f):
     @wraps(f)
@@ -30,6 +23,9 @@ def requires_auth(f):
             abort(401)
         return f(*args, **kwargs)
     return decorated
+
+
+###Helper functions
 
 def remove_ignore_entities(data, category):
     """Removes entity terms to be ignored found in ``ignore.json``
@@ -432,8 +428,12 @@ def webhook_post():
        Uses `find_location_and_meal` or `find_item` intent handlers and returns appropriate
        JSON response.
     """
+    secrets = get_secrets()
+    dba = dashbotgoogle.google(secrets.get('dashbot_api'))
+    
     req_data = request.get_json()
     dba.logIncoming(req_data)
+    
     intentname = req_data['queryResult']['intent']['displayName']
 
     if 'queryHelper' in intentname:
@@ -467,11 +467,7 @@ def cron_update():
     req_data = request.get_json()
 
     #Get secret values from Datastore environment variables
-    client = datastore.Client()
-    query = client.query(kind='env_vars')
-    entity = query.fetch()
-
-    secrets = list(entity)[0]
+    secrets = get_secrets()
     slackurl = secrets.get('slack_api')
     passw = secrets.get('pass')
     user = secrets.get('user')
@@ -483,7 +479,7 @@ def cron_update():
         locationchanged = False
 
         #Meal Diff
-        mealreq = requests.post('http://api.studentlife.umich.edu/menu/menu_generator/meal.php')
+        mealreq = requests.post(secrets.get('m_dining_api_meals'))
         mealdata = mealreq.json()
 
         newmeal = []
@@ -508,8 +504,7 @@ def cron_update():
 
 
         #Location Diff
-        m_dining_url = 'http://api.studentlife.umich.edu/menu/menu_generator/location.php'
-        locationreq = requests.post(m_dining_url)
+        locationreq = requests.post(secrets.get('m_dining_api_locations'))
         locationdata = locationreq.json()
 
         newlocation = []

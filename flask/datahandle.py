@@ -1,6 +1,15 @@
 import requests
+from google.cloud import datastore
 
 ###Helper functions
+def get_secrets():
+    """Fetches secrets from Datastore and returns them as a list.
+    """
+    client = datastore.Client()
+    query = client.query(kind='env_vars')
+    entity = query.fetch()
+    secrets = list(entity)[0]
+    return secrets
 
 def format_requisites(text, requisites):
     """If any item requisites specified, adds them to response text data for more holistic response.
@@ -293,7 +302,8 @@ def request_item(date_in, loc_in, item_in, meal_in, requisites):
     :param requisites: Contains information food item must comply with (traits, allergens, etc)
     :type requisites: dict
     """
-    url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
+    secrets = get_secrets()
+    url = secrets.get('m_dining_api_main')
     location = '&location='
     date = '&date='
     meal = '&meal='
