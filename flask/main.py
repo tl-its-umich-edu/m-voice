@@ -14,7 +14,14 @@ app = Flask(__name__)
 
 #Authentication
 def check_auth(name, passw):
-    return name == 'user' and passw == 'pass'
+    client = datastore.Client()
+    query = client.query(kind='env_vars')
+    entity = query.fetch()
+    secrets = list(entity)[0]
+    passwcheck = secrets.get('pass')
+    usercheck = secrets.get('user')
+    
+    return name == usercheck and passw == passwcheck
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
