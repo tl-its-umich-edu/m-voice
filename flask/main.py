@@ -119,6 +119,8 @@ def add_followup_event_input(responsedata, output_params):
     if 'followupEventInput' in responsedata:
         responsedata['followupEventInput']['parameters'].update(output_params)
     else:
+        if 'reset' in output_params:		
+            output_params = {}
         responsedata['followupEventInput'] = {
             'name': 'queryHelperEvent',
             'parameters': output_params
@@ -448,6 +450,9 @@ def webhook_post():
         responsedata = find_location_and_meal(req_data)
     elif 'findItem' in intentname:
         responsedata = find_item(req_data)
+    elif 'resetContexts' in intentname:		
+        responsedata = {}		
+        responsedata = add_followup_event_input(responsedata, {'reset':'reset'})
     else:
         responsedata = {'fulfillmentText': 'Not available.'}
 
