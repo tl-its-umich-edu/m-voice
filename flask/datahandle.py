@@ -1,12 +1,32 @@
 import requests
+from google.cloud import datastore
+import google.cloud.logging
 
 ###Helper functions
+
+def report_error(error_text):
+    """Logs error to Stackdriver.
+    :param error_text: The text to log to Stackdriver
+    :type error_text: string
+    """
+    client = google.cloud.logging.Client()
+    logger = client.logger("automated_error_catch")
+    logger.log_text(error_text)
+
+def get_secrets():
+    """Fetches secrets from Datastore and returns them as a list.
+    """
+    client = datastore.Client()
+    query = client.query(kind='env_vars')
+    entity = query.fetch()
+    secrets = list(entity)[0]
+    return secrets
 
 def format_requisites(text, requisites):
     """If any item requisites specified, adds them to response text data for more holistic response.
 
     :param text: The response text data to be formatted
-    :type texta: string
+    :type text: string
     :param requisites: Contains information food item must comply with (traits, allergens, etc)
     :type requisites: dict
     """
@@ -293,7 +313,8 @@ def request_item(date_in, loc_in, item_in, meal_in, requisites):
     :param requisites: Contains information food item must comply with (traits, allergens, etc)
     :type requisites: dict
     """
-    url = 'http://api.studentlife.umich.edu/menu/xml2print.php?controller=&view=json'
+    secrets = get_secrets()
+    url = secrets.get('m_dining_api_main')
     location = '&location='
     date = '&date='
     meal = '&meal='
