@@ -4,7 +4,8 @@ import json, requests
 import numpy as np
 from flask import Flask, request, jsonify, abort
 from google.cloud import datastore
-from datahandle import request_location_and_meal, request_item, format_requisites, get_secrets
+import google.cloud.logging
+from datahandle import request_location_and_meal, request_item, format_requisites, get_secrets, report_error
 from dashbot import google as dashbotgoogle
 
 app = Flask(__name__)
@@ -431,11 +432,17 @@ def webhook_post():
        JSON response.
     """
     secrets = get_secrets()
-    dba = dashbotgoogle.google(secrets.get('dashbot_api'))
-    
     req_data = request.get_json()
-    dba.logIncoming(req_data)
-    
+
+    #Dashbot logging with handling for potential error
+    try:
+        dba = dashbotgoogle.google(secrets.get('dashbot_api'))
+        dba.logIncoming(req_data)
+        dashbot_success = True
+    except:
+        report_error("dashbot")
+        dashbot_success = False
+
     intentname = req_data['queryResult']['intent']['displayName']
 
     if 'queryHelper' in intentname:
@@ -456,7 +463,9 @@ def webhook_post():
     else:
         responsedata = {'fulfillmentText': 'Not available.'}
 
-    dba.logOutgoing(req_data, responsedata)
+    if dashbot_success:
+        dba.logOutgoing(req_data, responsedata)
+    
     return jsonify(responsedata)
 
 #Google Cron update handler
