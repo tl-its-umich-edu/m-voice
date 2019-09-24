@@ -7,6 +7,7 @@ cachetools==3.1.1
 certifi==2019.6.16
 chardet==3.0.4
 dashbot==0.0.18
+dialogflow==0.6.0
 google-api-core==1.13.0
 google-auth==1.6.3
 google-cloud-core==1.0.2

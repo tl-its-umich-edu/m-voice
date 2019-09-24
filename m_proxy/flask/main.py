@@ -3,6 +3,7 @@ import datetime
 import json, requests
 from flask import Flask, request, jsonify, abort
 from google.cloud import datastore
+import dialogflow_v2
 #import google.cloud.logging
 
 app = Flask(__name__)
@@ -46,6 +47,24 @@ def proxy_post():
     """ Proxy to DialogFlow
     """
     secrets = get_secrets()
-#    req_data = request.get_json()
+    req_data = request.get_json()
 
-    return jsonify("")
+    project = req_data['project'] #project id
+    user_query = req_data['user_query'] #user question
+
+    session_id = '123456789' #randomized for every session
+    client = dialogflow_v2.SessionsClient()
+    session = client.session_path(project, session_id)
+    
+    query_input = {
+        "text": {
+            "text": user_query,
+            "language_code": "en-US"
+        }
+    }
+    response = client.detect_intent(session, query_input) #response is returned as DetectIntentResponse class
+    
+    responsedata = {'project': project,
+                    'user_query': user_query,
+                    'response': response.query_result.fulfillment_text}
+    return jsonify(responsedata)
