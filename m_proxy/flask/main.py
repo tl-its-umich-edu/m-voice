@@ -4,6 +4,7 @@ import json, requests
 from flask import Flask, request, jsonify, abort
 from google.cloud import datastore
 import dialogflow_v2
+import uuid
 #import google.cloud.logging
 
 app = Flask(__name__)
@@ -51,8 +52,10 @@ def proxy_post():
 
     project = req_data['project'] #project id
     user_query = req_data['user_query'] #user question
-
-    session_id = '123456789' #randomized for every session
+    if ('session_id' in req_data):
+        session_id = req_data['session_id']
+    else:
+        session_id = uuid.uuid1()
     client = dialogflow_v2.SessionsClient()
     session = client.session_path(project, session_id)
     
@@ -66,5 +69,6 @@ def proxy_post():
     
     responsedata = {'project': project,
                     'user_query': user_query,
-                    'response': response.query_result.fulfillment_text}
+                    'response': response.query_result.fulfillment_text,
+                    'session_id': session_id}
     return jsonify(responsedata)
