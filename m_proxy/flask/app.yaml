@@ -1,2 +1,7 @@
 runtime: python37
 service: mproxy
+handlers:
+- url: /.*
+  script: main.app
+  http_headers: 
+    Access-Control-Allow-Origin: "*"
