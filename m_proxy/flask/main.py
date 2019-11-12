@@ -2,12 +2,14 @@ from functools import wraps
 import datetime
 import json, requests
 from flask import Flask, request, jsonify, abort
+from flask_cors import CORS
 from google.cloud import datastore
 import dialogflow_v2
 import uuid
 #import google.cloud.logging
 
 app = Flask(__name__)
+CORS(app)
 
 #TODO: Move this into a common library
 def get_secrets():
