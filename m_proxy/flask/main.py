@@ -66,7 +66,8 @@ def proxy_post():
         }
     }
     response = client.detect_intent(session, query_input) #response is returned as DetectIntentResponse class
-    
+    # https://enable-cors.org/server_appengine.html
+    response.headers.add_header("Access-Control-Allow-Origin", "*")
     responsedata = {'project': project,
                     'user_query': user_query,
                     'response': response.query_result.fulfillment_text,
