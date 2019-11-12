@@ -54,10 +54,10 @@ def proxy_post():
 
     project = req_data['project'] #project id
     user_query = req_data['user_query'] #user question
-    if ('session_id' in req_data):
-        session_id = req_data['session_id']
-    else:
-        session_id = uuid.uuid1()
+    
+    # Use the provided session_id if present and not empty
+    session_id = req_data.get('session_id', uuid.uuid1()) or uuid.uuid1()
+    
     client = dialogflow_v2.SessionsClient()
     session = client.session_path(project, session_id)
     
