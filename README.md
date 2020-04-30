@@ -1,11 +1,11 @@
 # m-voice
+---
+## m_dining
+
 ### Documentation: https://m-voice.readthedocs.io/en/latest/
 Voice interface implementation for University of Michigan applications using Dialogflow. Currently focusing on MDining.
 **MDining API:** http://api.studentlife.umich.edu/menu/menu_generator/generator.html
 
-
-
----
 *Backend workflow:* 
 
 Dialogflow submits `POST` request to flask server webhook.
@@ -22,5 +22,15 @@ Dialogflow then receives appropriate information back from Flask server and resp
 
 *Dialogflow fulfillment documentation: https://dialogflow.com/docs/fulfillment/how-it-works*
 
+## m_proxy 
+Custom API initially intended for use with mobile
+
+Send `POST` with body:
+```
+{
+  "project": project_id,
+  "user_query": user_query
+}
+```
 ---
 Matthew Jones and Ibrahim Kosgi

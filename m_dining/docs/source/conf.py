@@ -21,7 +21,7 @@ sys.path.append(os.path.join(os.path.dirname(__name__), '../../'))
 # -- Project information -----------------------------------------------------
 
 project = 'm-voice'
-copyright = '2018, University of Michigan ITS'
+copyright = '2020, University of Michigan ITS'
 author = 'Ibrahim Kosgi, Matthew Jones'
 
 # The short X.Y version
