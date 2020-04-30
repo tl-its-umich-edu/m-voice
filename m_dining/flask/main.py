@@ -1,7 +1,6 @@
 from functools import wraps
 import datetime
 import json, requests
-import numpy as np
 from flask import Flask, request, jsonify, abort
 from google.cloud import datastore
 import google.cloud.logging

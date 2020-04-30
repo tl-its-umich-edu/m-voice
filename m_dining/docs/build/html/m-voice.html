@@ -21,10 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -84,7 +84,6 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-main">main.py</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-datahandle">datahandle.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-remove_ignore_entities">remove_ignore_entities.py</a></li>
 </ul>
 </li>
 </ul>
@@ -155,33 +154,71 @@
 <h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="module-main">
 <span id="main-py"></span><h2>main.py<a class="headerlink" href="#module-main" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="main.cronUpdate">
-<code class="sig-prename descclassname">main.</code><code class="sig-name descname">cronUpdate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#cronUpdate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.cronUpdate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Google Cloud Platform scheduled CRON request handler. Checks for changes to MDining API data (Location/Meal), sends notification to Slack channel if change detected. Ignores changes to specified terms in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code> file. Authenticates requests by checking for user and passw in POST request body.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="main.findLocationAndMeal">
-<code class="sig-prename descclassname">main.</code><code class="sig-name descname">findLocationAndMeal</code><span class="sig-paren">(</span><em class="sig-param">req_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#findLocationAndMeal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.findLocationAndMeal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dialogflow <code class="docutils literal notranslate"><span class="pre">findLocationAndMeal</span></code> intent handler. Checks for valid Location and Meal and sends HTTP response with appropriate data.</p>
+<dl class="py function">
+<dt id="main.add_followup_event_input">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">add_followup_event_input</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">responsedata</span></em>, <em class="sig-param"><span class="n">output_params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#add_followup_event_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.add_followup_event_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function for adding followupEventInput trigger to send data to queryHelper intent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>req_data</strong> (<em>JSON</em>) – Dialogflow POST request data</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>responsedata</strong> (<em>dict</em>) – The HTTP response data</p></li>
+<li><p><strong>output_params</strong> (<em>dict</em>) – Output context paramaters to send to queryHelper</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
+<dt id="main.cron_update">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">cron_update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#cron_update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.cron_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Google Cloud Platform scheduled CRON request handler.
+Checks for changes to MDining API data (Location/Meal),
+sends notification to Slack channel if change detected.
+Ignores changes to specified terms in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code> file.
+Authenticates requests by checking for user and passw in POST request body.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="main.find_item">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">find_item</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">req_data</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#find_item"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.find_item" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Dialogflow <code class="docutils literal notranslate"><span class="pre">find_item</span></code> intent handler.</dt><dd><p>Checks for valid Location and Item and sends HTTP response with appropriate data.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>req_data</strong> (<em>dict</em>) – Dialogflow POST request data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="main.find_location_and_meal">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">find_location_and_meal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">req_data</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#find_location_and_meal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.find_location_and_meal" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Dialogflow <code class="docutils literal notranslate"><span class="pre">find_location_and_meal</span></code> intent handler.</dt><dd><p>Checks for valid Location and Meal and sends HTTP response with appropriate data.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>req_data</strong> (<em>dict</em>) – Dialogflow POST request data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="main.home">
 <code class="sig-prename descclassname">main.</code><code class="sig-name descname">home</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#home"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.home" title="Permalink to this definition">¶</a></dt>
 <dd><p>Web app home page for quick successful deployment check.</p>
 </dd></dl>
 
-<dl class="function">
-<dt id="main.isPartialTerm">
-<code class="sig-prename descclassname">main.</code><code class="sig-name descname">isPartialTerm</code><span class="sig-paren">(</span><em class="sig-param">search</em>, <em class="sig-param">filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#isPartialTerm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.isPartialTerm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks if input term is part of a larger official term by looking for any matches with split up versions of regular terms.</p>
+<dl class="py function">
+<dt id="main.is_partial_term">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">is_partial_term</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">search</span></em>, <em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#is_partial_term"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.is_partial_term" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Checks if input term is part of a larger official term by looking for any matches with</dt><dd><p>split up versions of regular terms.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -192,10 +229,72 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="main.similarSearch">
-<code class="sig-prename descclassname">main.</code><code class="sig-name descname">similarSearch</code><span class="sig-paren">(</span><em class="sig-param">search</em>, <em class="sig-param">category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#similarSearch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.similarSearch" title="Permalink to this definition">¶</a></dt>
-<dd><p>Handles user input that doesn’t match official terms exactly using <cite>isPartialTerm</cite>. If input <code class="docutils literal notranslate"><span class="pre">search</span></code> is a partial term of any official terms, returns list of recommended official terms.</p>
+<dl class="py function">
+<dt id="main.remove_ignore_entities">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">remove_ignore_entities</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">category</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#remove_ignore_entities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.remove_ignore_entities" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Removes entity terms to be ignored found in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code></dt><dd><p>when comparing current local data and potentially updated MDining API data.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>list</em>) – List of items in current version of specified entity</p></li>
+<li><p><strong>category</strong> (<em>string</em>) – Entity category of the search term (‘Location’/’Meal’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="main.required_entities_handler">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">required_entities_handler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">req_data</span></em>, <em class="sig-param"><span class="n">intentname</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#required_entities_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.required_entities_handler" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Handles response for intents with 2 or more entities that are required and</dt><dd><p>need to be handled manually,
+returns approriate parameters for specific intent handler to take care of.
+Will return list of entities in Data paramater of responsedata
+if all input parameters were valid,
+or a string response in the Data parameter containing response of issue to user.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>req_data</strong> (<em>dict</em>) – The HTTP response data</p></li>
+<li><p><strong>intentname</strong> (<em>string</em>) – Output context paramaters to send to queryHelper</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="main.requisites_setup">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">requisites_setup</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">requisites</span></em>, <em class="sig-param"><span class="n">input_params</span></em>, <em class="sig-param"><span class="n">output_params</span></em>, <em class="sig-param"><span class="n">additional_output_params</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#requisites_setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.requisites_setup" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>If any requisities specified in context parameters,</dt><dd><p>extracts them and adds them to <code class="docutils literal notranslate"><span class="pre">output_params</span></code> to remember for next query.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
+<li><p><strong>input_params</strong> (<em>dict</em>) – Input context paramaters containing user specifications</p></li>
+<li><p><strong>output_params</strong> (<em>dict</em>) – Output context paramaters to send to queryHelper</p></li>
+<li><p><strong>additional_output_params</strong> (<em>dict</em>) – Additional remembered context paramaters containing user
+specifications from previous query if needed</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="main.similar_search">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">similar_search</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">search</span></em>, <em class="sig-param"><span class="n">category</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#similar_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.similar_search" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Handles user input that doesn’t match official terms exactly using <cite>is_partial_term</cite>.</dt><dd><p>If input <code class="docutils literal notranslate"><span class="pre">search</span></code> is a partial term of any official terms,
+returns list of recommended official terms.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -206,99 +305,148 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="main.webhookPost">
-<code class="sig-prename descclassname">main.</code><code class="sig-name descname">webhookPost</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#webhookPost"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.webhookPost" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dialogflow webhook POST Request handler requiring authentication. Uses <cite>findLocationAndMeal</cite> or <cite>findItem</cite> intent handlers and returns appropriate JSON response.</p>
+<dl class="py function">
+<dt id="main.webhook_post">
+<code class="sig-prename descclassname">main.</code><code class="sig-name descname">webhook_post</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/main.html#webhook_post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#main.webhook_post" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dialogflow webhook POST Request handler requiring authentication.
+Uses <cite>find_location_and_meal</cite> or <cite>find_item</cite> intent handlers and returns appropriate
+JSON response.</p>
 </dd></dl>
 
 </div>
 <div class="section" id="module-datahandle">
 <span id="datahandle-py"></span><h2>datahandle.py<a class="headerlink" href="#module-datahandle" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="datahandle.checkCourseAvailable">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">checkCourseAvailable</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">course</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#checkCourseAvailable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.checkCourseAvailable" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt id="datahandle.check_course_available">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">check_course_available</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">course</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#check_course_available"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.check_course_available" title="Permalink to this definition">¶</a></dt>
 <dd><p>Searches response data to check if course is available in specified meal.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – MDining API HTTP response data</p></li>
 <li><p><strong>course</strong> (<em>string</em>) – Name of course</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.checkMealAvailable">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">checkMealAvailable</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">meal</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#checkMealAvailable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.checkMealAvailable" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt id="datahandle.check_item_specifications">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">check_item_specifications</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span></em>, <em class="sig-param"><span class="n">traits</span></em>, <em class="sig-param"><span class="n">allergens</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#check_item_specifications"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.check_item_specifications" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true if food item is satisfactory with specified traits and allergens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> (<em>dict</em>) – Data of specific food item</p></li>
+<li><p><strong>traits</strong> (<em>list</em>) – List of specified traits item must have, can be empty</p></li>
+<li><p><strong>allergens</strong> (<em>list</em>) – List of allergens item cannot have, can be empty</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="datahandle.check_meal_available">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">check_meal_available</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">meal</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#check_meal_available"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.check_meal_available" title="Permalink to this definition">¶</a></dt>
 <dd><p>Searches response data to check if meal is available at specified location/date.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – MDining API HTTP response data</p></li>
 <li><p><strong>meal</strong> (<em>string</em>) – Name of meal</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.findItemFormatting">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">findItemFormatting</code><span class="sig-paren">(</span><em class="sig-param">possiblematches</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#findItemFormatting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.findItemFormatting" title="Permalink to this definition">¶</a></dt>
-<dd><p>Formatting list of possible matches into more natural sentence structure by removing redundancy:
-[Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -&gt; [Chicken, chicken wings during lunch, and chicken patty during dinner]</p>
+<dl class="py function">
+<dt id="datahandle.find_item_formatting">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">find_item_formatting</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">possible_matches</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#find_item_formatting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.find_item_formatting" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Formatting list of possible matches into more natural sentence structure</dt><dd><p>by removing redundancy:
+[Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -&gt;
+[Chicken, chicken wings during lunch, and chicken patty during dinner]</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>possiblematches</strong> (<em>list</em>) – List of food items in data that matched user input</p>
+<dd class="field-odd"><p><strong>possible_matches</strong> (<em>list</em>) – List of food items in data that matched user input</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.findMatches">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">findMatches</code><span class="sig-paren">(</span><em class="sig-param">coursedata</em>, <em class="sig-param">possiblematches</em>, <em class="sig-param">item_in</em>, <em class="sig-param">mealname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#findMatches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.findMatches" title="Permalink to this definition">¶</a></dt>
-<dd><p>Appends matches of specified food item in data of an individual course to list of possible matches.</p>
+<dl class="py function">
+<dt id="datahandle.find_matches">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">find_matches</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">course_data</span></em>, <em class="sig-param"><span class="n">possible_matches</span></em>, <em class="sig-param"><span class="n">item_in</span></em>, <em class="sig-param"><span class="n">meal_name</span></em>, <em class="sig-param"><span class="n">requisites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#find_matches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.find_matches" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Appends matches of specified food item in data of an individual course to</dt><dd><p>list of possible matches.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>coursedata</strong> (<em>JSON</em>) – Chosen course subsection of MDining API HTTP response data</p></li>
-<li><p><strong>possiblematches</strong> (<em>list</em>) – List of food items in data that matched user input</p></li>
+<li><p><strong>course_data</strong> (<em>dict</em>) – Chosen course subsection of MDining API HTTP response data</p></li>
+<li><p><strong>possible_matches</strong> (<em>list</em>) – List of food items in data that matched user input</p></li>
 <li><p><strong>item_in</strong> (<em>string</em>) – User input food item</p></li>
-<li><p><strong>mealname</strong> (<em>string</em>) – Name of meal</p></li>
+<li><p><strong>meal_name</strong> (<em>string</em>) – Name of meal</p></li>
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.getCoursesAndItems">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">getCoursesAndItems</code><span class="sig-paren">(</span><em class="sig-param">data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#getCoursesAndItems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.getCoursesAndItems" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.</p>
+<dl class="py function">
+<dt id="datahandle.format_plural">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">format_plural</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">text</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#format_plural"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.format_plural" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds ‘and’ before last item in list of items.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>JSON</em>) – MDining API HTTP response data</p>
+<dd class="field-odd"><p><strong>text</strong> (<em>string</em>) – The string to be manipulated</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.getItemsInCourse">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">getItemsInCourse</code><span class="sig-paren">(</span><em class="sig-param">coursedata</em>, <em class="sig-param">course</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#getItemsInCourse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.getItemsInCourse" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.</p>
+<dl class="py function">
+<dt id="datahandle.format_requisites">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">format_requisites</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">text</span></em>, <em class="sig-param"><span class="n">requisites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#format_requisites"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.format_requisites" title="Permalink to this definition">¶</a></dt>
+<dd><p>If any item requisites specified, adds them to response text data for more holistic response.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>coursedata</strong> (<em>JSON</em>) – Chosen course subsection of MDining API HTTP response data</p></li>
-<li><p><strong>course</strong> (<em>string</em>) – Name of course</p></li>
+<li><p><strong>text</strong> (<em>string</em>) – The response text data to be formatted</p></li>
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.removeSpaces">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">removeSpaces</code><span class="sig-paren">(</span><em class="sig-param">url_block</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#removeSpaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.removeSpaces" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt id="datahandle.get_items">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">get_items</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">requisites</span></em>, <em class="sig-param"><span class="n">formatted</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#get_items"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.get_items" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Returns string of food items of each course in response data for</dt><dd><p>fulfillmentText in response to Dialogflow.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>dict</em>) – MDining API HTTP response data</p></li>
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
+<li><p><strong>formatted</strong> (<em>boolean</em>) – True/False - formats response string if true</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="datahandle.get_secrets">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">get_secrets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#get_secrets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.get_secrets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches secrets from Datastore and returns them as a list.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="datahandle.remove_spaces">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">remove_spaces</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">url_block</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#remove_spaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.remove_spaces" title="Permalink to this definition">¶</a></dt>
 <dd><p>Removes spaces in url string to create valid url string.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -307,49 +455,48 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.requestItem">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">requestItem</code><span class="sig-paren">(</span><em class="sig-param">date_in</em>, <em class="sig-param">loc_in</em>, <em class="sig-param">meal_in</em>, <em class="sig-param">item_in</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#requestItem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.requestItem" title="Permalink to this definition">¶</a></dt>
-<dd><p>Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from <code class="docutils literal notranslate"><span class="pre">findItem</span></code> intent.</p>
+<dl class="py function">
+<dt id="datahandle.report_error">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">report_error</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">error_text</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#report_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.report_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Logs error to Stackdriver.
+:param error_text: The text to log to Stackdriver
+:type error_text: string</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="datahandle.request_item">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">request_item</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date_in</span></em>, <em class="sig-param"><span class="n">loc_in</span></em>, <em class="sig-param"><span class="n">item_in</span></em>, <em class="sig-param"><span class="n">meal_in</span></em>, <em class="sig-param"><span class="n">requisites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#request_item"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.request_item" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Handles searching for appropriate data response for valid specified</dt><dd><p>location and food item entities (and meal entity if included) from <code class="docutils literal notranslate"><span class="pre">findItem</span></code> intent.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>date_in</strong> (<em>string</em>) – Input date</p></li>
 <li><p><strong>loc_in</strong> (<em>string</em>) – Input location</p></li>
-<li><p><strong>meal_in</strong> (<em>string</em>) – Input meal</p></li>
 <li><p><strong>item_in</strong> (<em>string</em>) – Input food item</p></li>
+<li><p><strong>meal_in</strong> (<em>string</em>) – Input meal, can be empty string if not specified</p></li>
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="datahandle.requestLocationAndMeal">
-<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">requestLocationAndMeal</code><span class="sig-paren">(</span><em class="sig-param">date_in</em>, <em class="sig-param">loc_in</em>, <em class="sig-param">meal_in</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#requestLocationAndMeal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.requestLocationAndMeal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Handles searching for appropriate data response for valid specified location and meal entities from <code class="docutils literal notranslate"><span class="pre">findLocationAndMeal</span></code> intent.</p>
+<dl class="py function">
+<dt id="datahandle.request_location_and_meal">
+<code class="sig-prename descclassname">datahandle.</code><code class="sig-name descname">request_location_and_meal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">date_in</span></em>, <em class="sig-param"><span class="n">loc_in</span></em>, <em class="sig-param"><span class="n">meal_in</span></em>, <em class="sig-param"><span class="n">requisites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandle.html#request_location_and_meal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandle.request_location_and_meal" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Handles searching for appropriate data response for valid specified</dt><dd><p>location and meal entities from <code class="docutils literal notranslate"><span class="pre">findLocationAndMeal</span></code> intent.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>date_in</strong> (<em>string</em>) – Input date</p></li>
 <li><p><strong>loc_in</strong> (<em>string</em>) – Input location</p></li>
 <li><p><strong>meal_in</strong> (<em>string</em>) – Input meal</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="module-remove_ignore_entities">
-<span id="remove-ignore-entities-py"></span><h2>remove_ignore_entities.py<a class="headerlink" href="#module-remove_ignore_entities" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="remove_ignore_entities.removeIgnoreEntities">
-<code class="sig-prename descclassname">remove_ignore_entities.</code><code class="sig-name descname">removeIgnoreEntities</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/remove_ignore_entities.html#removeIgnoreEntities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#remove_ignore_entities.removeIgnoreEntities" title="Permalink to this definition">¶</a></dt>
-<dd><p>Removes entity terms to be ignored found in <code class="docutils literal notranslate"><span class="pre">ignore.json</span></code> when comparing current local data and potentially updated MDining API data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>list</em>) – List of items in current version of specified entity</p></li>
-<li><p><strong>category</strong> (<em>string</em>) – Entity category of the search term (‘Location’/’Meal’)</p></li>
+<li><p><strong>requisites</strong> (<em>dict</em>) – Contains information food item must comply with (traits, allergens, etc)</p></li>
 </ul>
 </dd>
 </dl>
@@ -376,7 +523,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, University of Michigan ITS
+        &copy; Copyright 2020, University of Michigan ITS
 
     </p>
   </div>

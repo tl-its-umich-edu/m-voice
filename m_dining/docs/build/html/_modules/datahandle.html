@@ -21,10 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -144,14 +144,88 @@
            <div itemprop="articleBody">
             
   <h1>Source code for datahandle</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">urllib.parse</span>
-<span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">import</span> <span class="nn">urllib.request</span>
-
+<span></span><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="kn">import</span> <span class="n">datastore</span>
+<span class="kn">import</span> <span class="nn">google.cloud.logging</span>
 
 <span class="c1">###Helper functions</span>
 
-<div class="viewcode-block" id="removeSpaces"><a class="viewcode-back" href="../m-voice.html#datahandle.removeSpaces">[docs]</a><span class="k">def</span> <span class="nf">removeSpaces</span><span class="p">(</span><span class="n">url_block</span><span class="p">):</span>
+<div class="viewcode-block" id="report_error"><a class="viewcode-back" href="../m-voice.html#datahandle.report_error">[docs]</a><span class="k">def</span> <span class="nf">report_error</span><span class="p">(</span><span class="n">error_text</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Logs error to Stackdriver.</span>
+<span class="sd">    :param error_text: The text to log to Stackdriver</span>
+<span class="sd">    :type error_text: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">google</span><span class="o">.</span><span class="n">cloud</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">logger</span><span class="p">(</span><span class="s2">&quot;automated_error_catch&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">log_text</span><span class="p">(</span><span class="n">error_text</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_secrets"><a class="viewcode-back" href="../m-voice.html#datahandle.get_secrets">[docs]</a><span class="k">def</span> <span class="nf">get_secrets</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Fetches secrets from Datastore and returns them as a list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">datastore</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;env_vars&#39;</span><span class="p">)</span>
+    <span class="n">entity</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">fetch</span><span class="p">()</span>
+    <span class="n">secrets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">entity</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">secrets</span></div>
+
+<div class="viewcode-block" id="format_requisites"><a class="viewcode-back" href="../m-voice.html#datahandle.format_requisites">[docs]</a><span class="k">def</span> <span class="nf">format_requisites</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">requisites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;If any item requisites specified, adds them to response text data for more holistic response.</span>
+
+<span class="sd">    :param text: The response text data to be formatted</span>
+<span class="sd">    :type text: string</span>
+<span class="sd">    :param requisites: Contains information food item must comply with (traits, allergens, etc)</span>
+<span class="sd">    :type requisites: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">traits_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">allergens_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="n">req_map</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;trait&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mhealthy&#39;</span><span class="p">:</span> <span class="s1">&#39;healthy&#39;</span><span class="p">},</span>
+               <span class="s1">&#39;allergens&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;sesame-seed&#39;</span><span class="p">:</span> <span class="s1">&#39;sesame seeds&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;tree-nuts&#39;</span><span class="p">:</span> <span class="s1">&#39;tree nuts&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;wheat_barley_rye&#39;</span><span class="p">:</span> <span class="s1">&#39;wheat or barley or rye&#39;</span><span class="p">}}</span>
+
+    <span class="c1">#If traits specified, extract into a string</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">trait</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;trait&#39;</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">traits_text</span><span class="p">:</span>
+            <span class="n">traits_text</span> <span class="o">+=</span> <span class="s1">&#39;, &#39;</span>
+        <span class="n">traits_text</span> <span class="o">+=</span> <span class="n">req_map</span><span class="p">[</span><span class="s1">&#39;trait&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">trait</span><span class="p">,</span> <span class="n">trait</span><span class="p">)</span>
+    <span class="n">traits_text</span> <span class="o">=</span> <span class="n">format_plural</span><span class="p">(</span><span class="n">traits_text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="p">))</span>
+
+    <span class="c1">#If allergens specified, extract into a string</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">allergen</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;allergens&#39;</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">allergens_text</span><span class="p">:</span>
+            <span class="n">allergens_text</span> <span class="o">+=</span> <span class="s1">&#39;, &#39;</span>
+        <span class="n">allergens_text</span> <span class="o">+=</span> <span class="n">req_map</span><span class="p">[</span><span class="s1">&#39;allergens&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">allergen</span><span class="p">,</span> <span class="n">allergen</span><span class="p">)</span>
+    <span class="n">allergens_text</span> <span class="o">=</span> <span class="n">format_plural</span><span class="p">(</span><span class="n">allergens_text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="p">))</span>
+    <span class="n">allergens_text</span> <span class="o">=</span> <span class="n">allergens_text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;or&#39;</span><span class="p">)</span>
+
+    <span class="c1">#Requisite-specific language</span>
+    <span class="k">if</span> <span class="n">allergens_text</span><span class="p">:</span>
+        <span class="n">allergens_text</span> <span class="o">=</span> <span class="s1">&#39; without &#39;</span> <span class="o">+</span> <span class="n">allergens_text</span>
+    <span class="k">if</span> <span class="n">traits_text</span><span class="p">:</span>
+        <span class="n">traits_text</span> <span class="o">=</span> <span class="s1">&#39; that is &#39;</span> <span class="o">+</span> <span class="n">traits_text</span>
+
+    <span class="c1">#Return combined string</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">allergens_text</span> <span class="ow">or</span> <span class="n">traits_text</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;Sorry, that is not available&#39;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">traits_text</span> <span class="o">=</span> <span class="n">traits_text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; that is &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;Sorry, &#39;</span><span class="p">,</span> <span class="s1">&#39;Sorry, &#39;</span> <span class="o">+</span> <span class="n">traits_text</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;that is not available&#39;</span><span class="p">,</span> <span class="s1">&#39;[meal]&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">text</span> <span class="o">+</span> <span class="n">allergens_text</span> <span class="o">+</span> <span class="s1">&#39; is not available&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">text</span> <span class="o">+</span> <span class="n">traits_text</span> <span class="o">+</span> <span class="n">allergens_text</span></div>
+
+<div class="viewcode-block" id="format_plural"><a class="viewcode-back" href="../m-voice.html#datahandle.format_plural">[docs]</a><span class="k">def</span> <span class="nf">format_plural</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Adds &#39;and&#39; before last item in list of items.</span>
+
+<span class="sd">    :param text: The string to be manipulated</span>
+<span class="sd">    :type text: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;,&#39;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>  <span class="o">+</span> <span class="mi">2</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">index</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;and &#39;</span> <span class="o">+</span> <span class="n">text</span><span class="p">[</span><span class="n">index</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="n">text</span></div>
+
+<div class="viewcode-block" id="remove_spaces"><a class="viewcode-back" href="../m-voice.html#datahandle.remove_spaces">[docs]</a><span class="k">def</span> <span class="nf">remove_spaces</span><span class="p">(</span><span class="n">url_block</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Removes spaces in url string to create valid url string.</span>
 
 <span class="sd">    :param url_block: The url string to be manipulated</span>
@@ -165,28 +239,26 @@
             <span class="n">temp</span> <span class="o">+=</span> <span class="n">url_block</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">temp</span></div>
 
-<div class="viewcode-block" id="checkMealAvailable"><a class="viewcode-back" href="../m-voice.html#datahandle.checkMealAvailable">[docs]</a><span class="k">def</span> <span class="nf">checkMealAvailable</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">meal</span><span class="p">):</span>
+<div class="viewcode-block" id="check_meal_available"><a class="viewcode-back" href="../m-voice.html#datahandle.check_meal_available">[docs]</a><span class="k">def</span> <span class="nf">check_meal_available</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">meal</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Searches response data to check if meal is available at specified location/date.</span>
 
 <span class="sd">    :param data: MDining API HTTP response data</span>
-<span class="sd">    :type data: JSON</span>
+<span class="sd">    :type data: dict</span>
 <span class="sd">    :param meal: Name of meal</span>
 <span class="sd">    :type meal: string</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="n">meal</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
             <span class="k">if</span> <span class="s1">&#39;course&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">]:</span>
-                <span class="c1">#print(&#39;Found&#39;)</span>
                 <span class="k">return</span> <span class="kc">True</span>
-            <span class="c1">#print(&#39;Not found&#39;)</span>
-            <span class="c1">#print(data[&#39;menu&#39;][&#39;meal&#39;][&#39;message&#39;][&#39;content&#39;])</span>
-            <span class="k">return</span> <span class="kc">False</span></div>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
 
-<div class="viewcode-block" id="checkCourseAvailable"><a class="viewcode-back" href="../m-voice.html#datahandle.checkCourseAvailable">[docs]</a><span class="k">def</span> <span class="nf">checkCourseAvailable</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">course</span><span class="p">):</span>
+<div class="viewcode-block" id="check_course_available"><a class="viewcode-back" href="../m-voice.html#datahandle.check_course_available">[docs]</a><span class="k">def</span> <span class="nf">check_course_available</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">course</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Searches response data to check if course is available in specified meal.</span>
 
 <span class="sd">    :param data: MDining API HTTP response data</span>
-<span class="sd">    :type data: JSON</span>
+<span class="sd">    :type data: dict</span>
 <span class="sd">    :param course: Name of course</span>
 <span class="sd">    :type course: string</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -197,95 +269,136 @@
                     <span class="k">return</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="kc">False</span></div>
 
-<span class="c1">#Gets food items of specified valid course</span>
-<div class="viewcode-block" id="getItemsInCourse"><a class="viewcode-back" href="../m-voice.html#datahandle.getItemsInCourse">[docs]</a><span class="k">def</span> <span class="nf">getItemsInCourse</span><span class="p">(</span><span class="n">coursedata</span><span class="p">,</span> <span class="n">course</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Returns string of food items of specified valid course in response data for fulfillmentText in response to Dialogflow.</span>
 
-<span class="sd">    :param coursedata: Chosen course subsection of MDining API HTTP response data</span>
-<span class="sd">    :type coursedata: JSON</span>
-<span class="sd">    :param course: Name of course</span>
-<span class="sd">    :type course: string</span>
+
+<div class="viewcode-block" id="check_item_specifications"><a class="viewcode-back" href="../m-voice.html#datahandle.check_item_specifications">[docs]</a><span class="k">def</span> <span class="nf">check_item_specifications</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">traits</span><span class="p">,</span> <span class="n">allergens</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns true if food item is satisfactory with specified traits and allergens.</span>
+
+<span class="sd">    :param item: Data of specific food item</span>
+<span class="sd">    :type item: dict</span>
+<span class="sd">    :param traits: List of specified traits item must have, can be empty</span>
+<span class="sd">    :type traits: list</span>
+<span class="sd">    :param allergens: List of allergens item cannot have, can be empty</span>
+<span class="sd">    :type allergens: list</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">returndata</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#Return false if allergens list isn&#39;t empty and any allergens found</span>
+    <span class="k">if</span> <span class="n">allergens</span> <span class="ow">and</span> <span class="s1">&#39;allergens&#39;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">allergen</span> <span class="ow">in</span> <span class="n">allergens</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">allergen</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;allergens&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coursedata</span><span class="p">)):</span>
-        <span class="n">datatype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">coursedata</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;menuitem&#39;</span><span class="p">])</span>
-        
-        <span class="k">if</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="n">course</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">datatype</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coursedata</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;menuitem&#39;</span><span class="p">])):</span>
-                    <span class="n">returndata</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;menuitem&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">datatype</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
-                <span class="n">returndata</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;menuitem&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">returndata</span></div>
+    <span class="c1">#Return true if traits list empty</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">traits</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
-<div class="viewcode-block" id="getCoursesAndItems"><a class="viewcode-back" href="../m-voice.html#datahandle.getCoursesAndItems">[docs]</a><span class="k">def</span> <span class="nf">getCoursesAndItems</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Returns string of courses and food items of each course in response data for fulfillmentText in response to Dialogflow.</span>
+    <span class="c1">#Return false if traits list isn&#39;t empty and any traits are missing</span>
+    <span class="k">if</span> <span class="s1">&#39;trait&#39;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">trait</span> <span class="ow">in</span> <span class="n">traits</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">trait</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;trait&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1">#All traits found, return true</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="get_items"><a class="viewcode-back" href="../m-voice.html#datahandle.get_items">[docs]</a><span class="k">def</span> <span class="nf">get_items</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">requisites</span><span class="p">,</span> <span class="n">formatted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns string of food items of each course in response data for</span>
+<span class="sd">       fulfillmentText in response to Dialogflow.</span>
 
 <span class="sd">    :param data: MDining API HTTP response data</span>
-<span class="sd">    :type data: JSON</span>
+<span class="sd">    :type data: dict</span>
+<span class="sd">    :param requisites: Contains information food item must comply with (traits, allergens, etc)</span>
+<span class="sd">    :type requisites: dict</span>
+<span class="sd">    :param formatted: True/False - formats response string if true</span>
+<span class="sd">    :type formatted: boolean</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">returndata</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">][</span><span class="s1">&#39;course&#39;</span><span class="p">])):</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">][</span><span class="s1">&#39;course&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span>
-                <span class="k">if</span><span class="p">(</span><span class="n">checkCourseAvailable</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">value</span><span class="p">)):</span>
-                    <span class="n">returndata</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Items in &#39;</span> <span class="o">+</span> <span class="n">value</span> <span class="o">+</span> <span class="s1">&#39; course:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">traits</span> <span class="o">=</span> <span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;trait&#39;</span><span class="p">]</span>
+    <span class="n">allergens</span> <span class="o">=</span> <span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;allergens&#39;</span><span class="p">]</span>
 
-                    <span class="n">returndata</span> <span class="o">+=</span> <span class="n">getItemsInCourse</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">][</span><span class="s1">&#39;course&#39;</span><span class="p">],</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">formatted</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span>
+
+    <span class="k">for</span> <span class="n">course</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">][</span><span class="s1">&#39;course&#39;</span><span class="p">]:</span>
+        <span class="n">item_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">datatype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">course</span><span class="p">[</span><span class="s1">&#39;menuitem&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">datatype</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">item_data</span> <span class="o">+=</span> <span class="n">course</span><span class="p">[</span><span class="s1">&#39;menuitem&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">item_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">course</span><span class="p">[</span><span class="s1">&#39;menuitem&#39;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">item_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">check_item_specifications</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">traits</span><span class="p">,</span> <span class="n">allergens</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;No Service at this Time&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span>
+                <span class="n">returndata</span> <span class="o">+=</span> <span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">suffix</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">returndata</span></div>
 
-<div class="viewcode-block" id="findItemFormatting"><a class="viewcode-back" href="../m-voice.html#datahandle.findItemFormatting">[docs]</a><span class="k">def</span> <span class="nf">findItemFormatting</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Formatting list of possible matches into more natural sentence structure by removing redundancy:</span>
-<span class="sd">    [Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -&gt; [Chicken, chicken wings during lunch, and chicken patty during dinner]</span>
-<span class="sd">    </span>
-<span class="sd">    :param possiblematches: List of food items in data that matched user input</span>
-<span class="sd">    :type possiblematches: list</span>
+<div class="viewcode-block" id="find_item_formatting"><a class="viewcode-back" href="../m-voice.html#datahandle.find_item_formatting">[docs]</a><span class="k">def</span> <span class="nf">find_item_formatting</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Formatting list of possible matches into more natural sentence structure</span>
+<span class="sd">       by removing redundancy:</span>
+<span class="sd">       [Chicken during lunch, chicken wings during lunch, and chicken patty during dinner] -&gt;</span>
+<span class="sd">       [Chicken, chicken wings during lunch, and chicken patty during dinner]</span>
+
+<span class="sd">    :param possible_matches: List of food items in data that matched user input</span>
+<span class="sd">    :type possible_matches: list</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="n">words</span> <span class="o">=</span> <span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        
+        <span class="n">words</span> <span class="o">=</span> <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
         <span class="c1">#If previous term has same ending (&quot;Dinner&quot;) as current term, remove it</span>
-        <span class="k">if</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
             <span class="c1">#8 = amount of characters taken up by [&#39; during &#39;]</span>
-            <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">8</span>
-            <span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][:</span><span class="n">length</span><span class="o">*-</span><span class="mi">1</span><span class="p">]</span>
-            
-    <span class="k">return</span> <span class="n">possiblematches</span></div>
+            <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">8</span>
+            <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][:</span><span class="n">length</span><span class="o">*-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">possible_matches</span></div>
 
 
-<div class="viewcode-block" id="findMatches"><a class="viewcode-back" href="../m-voice.html#datahandle.findMatches">[docs]</a><span class="k">def</span> <span class="nf">findMatches</span><span class="p">(</span><span class="n">coursedata</span><span class="p">,</span> <span class="n">possiblematches</span><span class="p">,</span> <span class="n">item_in</span><span class="p">,</span> <span class="n">mealname</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Appends matches of specified food item in data of an individual course to list of possible matches.</span>
+<div class="viewcode-block" id="find_matches"><a class="viewcode-back" href="../m-voice.html#datahandle.find_matches">[docs]</a><span class="k">def</span> <span class="nf">find_matches</span><span class="p">(</span><span class="n">course_data</span><span class="p">,</span> <span class="n">possible_matches</span><span class="p">,</span> <span class="n">item_in</span><span class="p">,</span> <span class="n">meal_name</span><span class="p">,</span> <span class="n">requisites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Appends matches of specified food item in data of an individual course to</span>
+<span class="sd">       list of possible matches.</span>
 
-<span class="sd">    :param coursedata: Chosen course subsection of MDining API HTTP response data</span>
-<span class="sd">    :type coursedata: JSON</span>
-<span class="sd">    :param possiblematches: List of food items in data that matched user input</span>
-<span class="sd">    :type possiblematches: list</span>
+<span class="sd">    :param course_data: Chosen course subsection of MDining API HTTP response data</span>
+<span class="sd">    :type course_data: dict</span>
+<span class="sd">    :param possible_matches: List of food items in data that matched user input</span>
+<span class="sd">    :type possible_matches: list</span>
 <span class="sd">    :param item_in: User input food item</span>
 <span class="sd">    :type item_in: string</span>
-<span class="sd">    :param mealname: Name of meal</span>
-<span class="sd">    :type mealname: string</span>
+<span class="sd">    :param meal_name: Name of meal</span>
+<span class="sd">    :type meal_name: string</span>
+<span class="sd">    :param requisites: Contains information food item must comply with (traits, allergens, etc)</span>
+<span class="sd">    :type requisites: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">datatype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">coursedata</span><span class="p">)</span>
+
+    <span class="n">traits</span> <span class="o">=</span> <span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;trait&#39;</span><span class="p">]</span>
+    <span class="n">allergens</span> <span class="o">=</span> <span class="n">requisites</span><span class="p">[</span><span class="s1">&#39;allergens&#39;</span><span class="p">]</span>
+
+    <span class="n">item_data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">datatype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">course_data</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">datatype</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coursedata</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">item_in</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
-                    <span class="n">coursedata</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coursedata</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                    
-                <span class="n">possiblematches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coursedata</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; during &#39;</span> <span class="o">+</span> <span class="n">mealname</span><span class="p">)</span>
+        <span class="n">item_data</span> <span class="o">+=</span> <span class="n">course_data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">item_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">course_data</span><span class="p">)</span>
 
-    <span class="k">elif</span> <span class="n">datatype</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">item_in</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">coursedata</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">coursedata</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
-                <span class="n">coursedata</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coursedata</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                
-            <span class="n">possiblematches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coursedata</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; during &#39;</span> <span class="o">+</span> <span class="n">mealname</span><span class="p">)</span>    
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">item_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">check_item_specifications</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">traits</span><span class="p">,</span> <span class="n">allergens</span><span class="p">)</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">item_in</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
+                <span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
-    <span class="k">return</span> <span class="n">possiblematches</span></div>
+            <span class="n">possible_matches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; during &#39;</span> <span class="o">+</span> <span class="n">meal_name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">possible_matches</span></div>
 
 
 
@@ -293,8 +406,9 @@
 <span class="c1">###Primary Handler Functions</span>
 
 
-<div class="viewcode-block" id="requestLocationAndMeal"><a class="viewcode-back" href="../m-voice.html#datahandle.requestLocationAndMeal">[docs]</a><span class="k">def</span> <span class="nf">requestLocationAndMeal</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Handles searching for appropriate data response for valid specified location and meal entities from ``findLocationAndMeal`` intent.</span>
+<div class="viewcode-block" id="request_location_and_meal"><a class="viewcode-back" href="../m-voice.html#datahandle.request_location_and_meal">[docs]</a><span class="k">def</span> <span class="nf">request_location_and_meal</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">,</span> <span class="n">requisites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handles searching for appropriate data response for valid specified</span>
+<span class="sd">       location and meal entities from ``findLocationAndMeal`` intent.</span>
 
 <span class="sd">    :param date_in: Input date</span>
 <span class="sd">    :type date_in: string</span>
@@ -302,9 +416,10 @@
 <span class="sd">    :type loc_in: string</span>
 <span class="sd">    :param meal_in: Input meal</span>
 <span class="sd">    :type meal_in: string</span>
+<span class="sd">    :param requisites: Contains information food item must comply with (traits, allergens, etc)</span>
+<span class="sd">    :type requisites: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1">#date_in=&#39;2019-05-15&#39;</span>
-    
+
     <span class="c1">#preset vars</span>
     <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://api.studentlife.umich.edu/menu/xml2print.php?controller=&amp;view=json&#39;</span>
     <span class="n">location</span> <span class="o">=</span> <span class="s1">&#39;&amp;location=&#39;</span>
@@ -316,32 +431,36 @@
     <span class="n">meal</span> <span class="o">+=</span> <span class="n">meal_in</span>
     <span class="n">date</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">date_in</span><span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">url</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="n">date</span> <span class="o">+</span> <span class="n">meal</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="n">removeSpaces</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-    
+    <span class="n">url</span> <span class="o">=</span> <span class="n">remove_spaces</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
     <span class="c1">#fetching json</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-    
+
     <span class="c1">#checking if specified meal available</span>
-    <span class="k">if</span> <span class="n">checkMealAvailable</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">getCoursesAndItems</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">getCoursesAndItems</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">check_meal_available</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">):</span>
+        <span class="n">returnstring</span> <span class="o">=</span> <span class="p">(</span><span class="n">get_items</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">requisites</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">format_plural</span><span class="p">(</span><span class="n">returnstring</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;No meal is available.&quot;</span></div>
+        <span class="k">return</span> <span class="s2">&quot;No meal is available&quot;</span></div>
 
 <span class="c1">#Handle meal item data request</span>
-<div class="viewcode-block" id="requestItem"><a class="viewcode-back" href="../m-voice.html#datahandle.requestItem">[docs]</a><span class="k">def</span> <span class="nf">requestItem</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">,</span> <span class="n">item_in</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Handles searching for appropriate data response for valid specified location and food item entities (and meal entity if included) from ``findItem`` intent.</span>
+<div class="viewcode-block" id="request_item"><a class="viewcode-back" href="../m-voice.html#datahandle.request_item">[docs]</a><span class="k">def</span> <span class="nf">request_item</span><span class="p">(</span><span class="n">date_in</span><span class="p">,</span> <span class="n">loc_in</span><span class="p">,</span> <span class="n">item_in</span><span class="p">,</span> <span class="n">meal_in</span><span class="p">,</span> <span class="n">requisites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handles searching for appropriate data response for valid specified</span>
+<span class="sd">       location and food item entities (and meal entity if included) from ``findItem`` intent.</span>
 
 <span class="sd">    :param date_in: Input date</span>
 <span class="sd">    :type date_in: string</span>
 <span class="sd">    :param loc_in: Input location</span>
 <span class="sd">    :type loc_in: string</span>
-<span class="sd">    :param meal_in: Input meal</span>
-<span class="sd">    :type meal_in: string</span>
 <span class="sd">    :param item_in: Input food item</span>
 <span class="sd">    :type item_in: string</span>
+<span class="sd">    :param meal_in: Input meal, can be empty string if not specified</span>
+<span class="sd">    :type meal_in: string</span>
+<span class="sd">    :param requisites: Contains information food item must comply with (traits, allergens, etc)</span>
+<span class="sd">    :type requisites: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;http://api.studentlife.umich.edu/menu/xml2print.php?controller=&amp;view=json&#39;</span>
+    <span class="n">secrets</span> <span class="o">=</span> <span class="n">get_secrets</span><span class="p">()</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;m_dining_api_main&#39;</span><span class="p">)</span>
     <span class="n">location</span> <span class="o">=</span> <span class="s1">&#39;&amp;location=&#39;</span>
     <span class="n">date</span> <span class="o">=</span> <span class="s1">&#39;&amp;date=&#39;</span>
     <span class="n">meal</span> <span class="o">=</span> <span class="s1">&#39;&amp;meal=&#39;</span>
@@ -350,25 +469,23 @@
     <span class="n">location</span> <span class="o">+=</span> <span class="n">loc_in</span>
     <span class="n">date</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">date_in</span><span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">url</span> <span class="o">+</span> <span class="n">location</span> <span class="o">+</span> <span class="n">date</span> <span class="o">+</span> <span class="n">meal</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="n">removeSpaces</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">remove_spaces</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">meal_in</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-        <span class="n">mealEntered</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">meal_entered</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">mealEntered</span> <span class="o">=</span> <span class="kc">True</span>
-    
+        <span class="n">meal_entered</span> <span class="o">=</span> <span class="kc">True</span>
+
     <span class="c1">#fetching json</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-    
-    <span class="n">possiblematches</span> <span class="o">=</span> <span class="p">[]</span>
-    
-    <span class="n">firstRound</span> <span class="o">=</span> <span class="kc">True</span>
-    
+
+    <span class="n">possible_matches</span> <span class="o">=</span> <span class="p">[]</span>
+
     <span class="c1">#Loop through meals</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;menu&#39;</span><span class="p">][</span><span class="s1">&#39;meal&#39;</span><span class="p">]:</span>
-        
+
         <span class="c1">#If meal specified, only check specified meal</span>
-        <span class="k">if</span> <span class="n">mealEntered</span> <span class="ow">and</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">!=</span> <span class="n">meal_in</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">meal_entered</span> <span class="ow">and</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">!=</span> <span class="n">meal_in</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
             <span class="k">continue</span>
         <span class="c1">#Skip meal if no food items available</span>
         <span class="k">if</span> <span class="s1">&#39;course&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
@@ -378,30 +495,29 @@
         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;course&#39;</span><span class="p">]:</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">j</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span>
-                    <span class="n">coursedata</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s1">&#39;menuitem&#39;</span><span class="p">]</span>
-                    <span class="n">mealname</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
-                    <span class="c1">#Append matches to specified item to possiblematches list</span>
-                    <span class="n">possiblematches</span> <span class="o">=</span> <span class="n">findMatches</span><span class="p">(</span><span class="n">coursedata</span><span class="p">,</span> <span class="n">possiblematches</span><span class="p">,</span> <span class="n">item_in</span><span class="p">,</span> <span class="n">mealname</span><span class="p">)</span>
-         
+                    <span class="n">course_data</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s1">&#39;menuitem&#39;</span><span class="p">]</span>
+                    <span class="n">meal_name</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+                    <span class="c1">#Append matches to specified item to possible_matches list</span>
+                    <span class="n">possible_matches</span> <span class="o">=</span> <span class="n">find_matches</span><span class="p">(</span><span class="n">course_data</span><span class="p">,</span> <span class="n">possible_matches</span><span class="p">,</span>
+                                                    <span class="n">item_in</span><span class="p">,</span> <span class="n">meal_name</span><span class="p">,</span> <span class="n">requisites</span><span class="p">)</span>
+    
     <span class="c1">#Specified item found</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">possiblematches</span> <span class="o">=</span> <span class="n">findItemFormatting</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)</span>   
+    <span class="k">if</span> <span class="n">possible_matches</span><span class="p">:</span>
+        <span class="n">possible_matches</span> <span class="o">=</span> <span class="n">find_item_formatting</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)</span>
         <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;Yes, there is &#39;</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39; and&#39;</span>
-            <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">possiblematches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">possiblematches</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">possible_matches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">possible_matches</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;,&#39;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;.&#39;</span>
+
     <span class="c1">#Specified item not found</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;Sorry, that is not available.&#39;</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;Sorry, that is not available&#39;</span>
 
-    
-    <span class="k">return</span> <span class="p">{</span> <span class="s1">&#39;fulfillmentText&#39;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span></div>
 
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;fulfillmentText&#39;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span></div>
 </pre></div>
 
            </div>
@@ -414,7 +530,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, University of Michigan ITS
+        &copy; Copyright 2020, University of Michigan ITS
 
     </p>
   </div>
